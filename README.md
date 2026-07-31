@@ -12,6 +12,7 @@ DataHub/
 ├── backend/       — Fastify API server (Node.js + TypeScript)
 ├── datahub-web/   — React frontend (Vite)
 ├── plan/          — Dokumen perencanaan (PRD, TechSpec, UI Design, checklist)
+├── compose.yaml   — Postgres untuk pengembangan lokal
 └── README.md
 ```
 
@@ -51,12 +52,19 @@ VITE_API_MODE=http npm run dev
 
 ## Login
 
-| Email | Password | Peran |
-|-------|----------|-------|
-| `admin@toko.id` | `admin123` | Admin |
-| `rina@toko.id` | `admin123` | Finance |
-| `dimas@toko.id` | `admin123` | Sales |
-| `agus@toko.id` | `admin123` | Gudang |
+Seed data (5 user contoh) hanya jalan otomatis saat `NODE_ENV=development`. Password
+tidak lagi hardcoded — set `SEED_PASSWORD` di `.env` sebelum seed jalan, atau biarkan
+kosong dan password random akan di-generate + di-log sekali ke console saat boot:
+
+| Email | Peran |
+|-------|-------|
+| `admin@toko.id` | Admin |
+| `rina@toko.id` | Finance |
+| `dimas@toko.id` | Sales |
+| `agus@toko.id` | Gudang |
+
+Semua user seed memakai password yang sama (dari `SEED_PASSWORD` atau hasil generate).
+Cek log backend saat pertama kali jalan untuk melihat passwordnya.
 
 ## Tech Stack
 

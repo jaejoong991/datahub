@@ -7,8 +7,8 @@ build/
 *.tsbuildinfo
 
 # Environment — JANGAN commit.
-# backend/.env berisi SESSION_SECRET, ENCRYPTION_KEY, dan DATABASE_URL
-# (lengkap dengan password). Template-nya ada di .env.example.
+# backend/.env berisi ENCRYPTION_KEY dan DATABASE_URL (lengkap dengan
+# password). Template-nya ada di .env.example.
 .env
 .env.local
 .env.*.local

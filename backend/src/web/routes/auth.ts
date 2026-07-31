@@ -1,11 +1,13 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import { getDb } from '../../lib/db.js';
 import { verifyPassword } from '../../lib/crypto.js';
 import { createSession, deleteSession, setActiveShop } from '../../lib/session.js';
 import { authPreHandler } from '../../lib/auth.js';
 import { requireRole } from '../../lib/rbac.js';
-import { getAuthorizationUrl, exchangeCodeForTokens, forceReauthorize } from '../../shopee/token.js';
+import { getEnv } from '../../lib/env.js';
+import { getAuthorizationUrl, exchangeCodeForTokens, clearShopTokens } from '../../shopee/token.js';
 import { logInfo } from '../../lib/logger.js';
 
 const loginSchema = z.object({
@@ -13,8 +15,26 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const OAUTH_STATE_COOKIE = 'shopee_oauth_state';
+
+/* Mulai flow OAuth Shopee: generate state CSRF, simpan di cookie, kembalikan URL
+   otorisasi. Dipakai /authorize DAN /reauthorize — dua-duanya mendarat di
+   /callback yang sama, jadi dua-duanya wajib set cookie state. */
+async function beginShopeeAuth(reply: FastifyReply, shopId: number): Promise<string> {
+  const env = getEnv();
+  const state = randomBytes(32).toString('hex');
+  reply.setCookie(OAUTH_STATE_COOKIE, `${state}.${shopId}`, {
+    path: '/', httpOnly: true, sameSite: 'lax', maxAge: 600, secure: env.NODE_ENV === 'production',
+  });
+  // redirect_uri harus nunjuk ke backend sendiri (bukan origin frontend) —
+  // handler callback-nya hidup di sini.
+  return getAuthorizationUrl(shopId, `${env.APP_URL}/auth/shopee/callback`, state);
+}
+
 export async function authRoutes(app: FastifyInstance) {
-  app.post('/login', async (req, reply) => {
+  const env = getEnv();
+
+  app.post('/login', { config: { rateLimit: { max: 10, timeWindow: '15 minutes' } } }, async (req, reply) => {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) {
       return reply.status(422).send({ message: 'Email dan password wajib diisi.', code: 'validation_error' });
@@ -34,7 +54,7 @@ export async function authRoutes(app: FastifyInstance) {
 
     const sessionId = await createSession(user.id, firstShop?.id);
     reply.setCookie('session_id', sessionId, {
-      path: '/', httpOnly: true, sameSite: 'lax', maxAge: 86400,
+      path: '/', httpOnly: true, sameSite: 'lax', maxAge: 86400, secure: env.NODE_ENV === 'production',
     });
     await getDb().insertInto('activity_log').values({
       user_id: user.id, action: 'login', detail: null, ip: req.ip,
@@ -112,24 +132,45 @@ export async function authRoutes(app: FastifyInstance) {
 
   /* Admin masuk ke halaman ini → redirect ke Shopee OAuth. */
   app.get('/auth/shopee/authorize', { preHandler: [authPreHandler, requireRole(['admin'])] }, async (req, reply) => {
-    const origin = req.headers.origin ?? process.env.CORS_ORIGIN ?? 'http://localhost:5173';
-    const redirectUri = `${origin}/auth/shopee/callback`;
-    const shopId = req.shopId ?? 1;
-    const url = await getAuthorizationUrl(shopId, redirectUri);
+    const url = await beginShopeeAuth(reply, req.shopId ?? 1);
     logInfo(`Shopee authorize redirect`, { url });
     return reply.redirect(url);
   });
 
   /* Callback dari Shopee setelah user menyetujui. */
   app.get('/auth/shopee/callback', async (req, reply) => {
-    const { code, shop_id } = req.query as { code?: string; shop_id?: string };
+    const { code, state } = req.query as { code?: string; state?: string };
+    const cookieVal = req.cookies?.[OAUTH_STATE_COOKIE];
+    reply.clearCookie(OAUTH_STATE_COOKIE, { path: '/' });
+
     if (!code) {
       return reply.status(400).send({ message: 'Missing code from Shopee.' });
     }
-    const shopId = shop_id ? Number(shop_id) : 1;
+
+    const separatorIdx = cookieVal?.indexOf('.') ?? -1;
+    if (!cookieVal || !state || separatorIdx === -1) {
+      return reply.status(400).send({ message: 'Invalid OAuth state.' });
+    }
+
+    // Bandingkan state dengan timing-safe compare — cek panjang dulu supaya
+    // timingSafeEqual tidak throw pada buffer berbeda ukuran.
+    const cookieState = cookieVal.slice(0, separatorIdx);
+    const stateBuf = Buffer.from(state);
+    const cookieStateBuf = Buffer.from(cookieState);
+    if (stateBuf.length !== cookieStateBuf.length || !timingSafeEqual(stateBuf, cookieStateBuf)) {
+      return reply.status(400).send({ message: 'Invalid OAuth state.' });
+    }
+
+    // shopId selalu dari cookie (server-signed session), bukan dari query — query
+    // bisa dipalsukan siapa saja.
+    const shopId = Number(cookieVal.slice(separatorIdx + 1));
+    if (!Number.isInteger(shopId)) {
+      return reply.status(400).send({ message: 'Invalid OAuth state.' });
+    }
+
     try {
       await exchangeCodeForTokens(shopId, code);
-      return reply.redirect('/sinkron'); // Redirect ke halaman status
+      return reply.redirect(`${env.CORS_ORIGIN}/sinkron`); // Redirect ke halaman status di frontend
     } catch (err) {
       logInfo('Shopee auth callback failed', { error: (err as Error).message });
       return reply.status(500).send({ message: 'Otorisasi Shopee gagal.', error: (err as Error).message });
@@ -138,7 +179,9 @@ export async function authRoutes(app: FastifyInstance) {
 
   /* Force re-authorize — hapus token, redirect ke authorize. */
   app.post('/auth/shopee/reauthorize', { preHandler: [authPreHandler, requireRole(['admin'])] }, async (req, reply) => {
-    const url = await forceReauthorize(req.shopId ?? 1);
+    const shopId = req.shopId ?? 1;
+    await clearShopTokens(shopId);
+    const url = await beginShopeeAuth(reply, shopId);
     return { url };
   });
 }
