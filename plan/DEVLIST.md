@@ -157,7 +157,7 @@
 ## Cara Pakai
 
 ```bash
-cd datahub-web/datahub-web
+cd frontend
 npm run dev               # Mock mode (port 5173)
 VITE_API_MODE=http npm run dev  # Backend mode
 npm run build             # Production build

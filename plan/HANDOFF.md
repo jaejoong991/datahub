@@ -25,7 +25,7 @@ DataHub/
 │   ├── src/shopee/           client(SDK wrap), config(DB cred), token, spike
 │   └── src/web/routes/       auth, sync, finance, sales, products, warehouse,
 │                              admin(users/plans/roles/shops)
-├── datahub-web/datahub-web/src/     ← NESTED, bukan datahub-web/src/
+├── frontend/src/
 │   ├── App.jsx               multi-shop, hash routing, RBAC, feature gates
 │   ├── components/           DataTable, Chart(Recharts), Pagination, DateRangePicker, Shell
 │   ├── pages/                29 pages (5 full + 24 placeholder)
@@ -54,14 +54,14 @@ DataHub/
 cd backend && npm install && npm run dev  # → :3000
 
 # Frontend mock
-cd datahub-web/datahub-web && npm install && npm run dev  # → :5173
+cd frontend && npm install && npm run dev  # → :5173
 
 # Frontend + Backend
 VITE_API_MODE=http VITE_API_BASE=http://localhost:3000 npm run dev
 
 # Test frontend
-cd datahub-web/datahub-web && npm run test:run   # sekali jalan
-cd datahub-web/datahub-web && npm test           # watch mode
+cd frontend && npm run test:run   # sekali jalan
+cd frontend && npm test           # watch mode
 
 # Typecheck backend
 cd backend && npm run lint                        # tsc --noEmit

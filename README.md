@@ -10,7 +10,7 @@ Dashboard internal untuk menarik data Shopee otomatis. Read-only, satu layar,
 ```
 DataHub/
 ├── backend/       — Fastify API server (Node.js + TypeScript)
-├── datahub-web/   — React frontend (Vite)
+├── frontend/      — React frontend (Vite)
 ├── plan/          — Dokumen perencanaan (PRD, TechSpec, UI Design, checklist)
 ├── compose.yaml   — Postgres untuk pengembangan lokal
 └── README.md
@@ -37,7 +37,7 @@ npm run dev
 ### Frontend (mock — tanpa backend)
 
 ```bash
-cd datahub-web/datahub-web
+cd frontend
 npm install
 npm run dev
 # → http://localhost:5173, klik "Lewati login (data contoh)"
@@ -46,7 +46,7 @@ npm run dev
 ### Frontend + Backend
 
 ```bash
-cd datahub-web/datahub-web
+cd frontend
 VITE_API_MODE=http npm run dev
 ```
 
