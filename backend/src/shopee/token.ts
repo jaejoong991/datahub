@@ -1,8 +1,8 @@
 import { getShopeeSDK } from './client.js';
 import { logInfo } from '../lib/logger.js';
 
-export const getAuthorizationUrl = (shopId: number, redirectUri: string) =>
-  getShopeeSDK(shopId).then(s => s.getAuthorizationUrl(redirectUri));
+export const getAuthorizationUrl = (shopId: number, redirectUri: string, state?: string) =>
+  getShopeeSDK(shopId).then(s => s.getAuthorizationUrl(redirectUri, state ? { state } : undefined));
 
 export async function exchangeCodeForTokens(shopId: number, code: string): Promise<void> {
   const sdk = await getShopeeSDK(shopId);
@@ -17,9 +17,12 @@ export async function getValidToken(shopId: number): Promise<string> {
   return token.access_token;
 }
 
-export async function forceReauthorize(shopId: number): Promise<string> {
+/* Hapus token tersimpan supaya shop harus otorisasi ulang. Sengaja TIDAK bikin
+   URL otorisasi di sini: URL + cookie state CSRF dibangun di layer HTTP
+   (routes/auth.ts) supaya /authorize dan /reauthorize lewat jalur yang sama —
+   kalau tidak, callback menolak flow ini karena state-nya tidak pernah di-set. */
+export async function clearShopTokens(shopId: number): Promise<void> {
   const sdk = await getShopeeSDK(shopId);
-  (sdk as any).tokenStorage?.clear();
-  const url = `${process.env.CORS_ORIGIN ?? 'http://localhost:5173'}/auth/shopee/callback`;
-  return getAuthorizationUrl(shopId, url);
+  await (sdk as any).tokenStorage?.clear();
+  logInfo(`Shopee tokens cleared for shop ${shopId}`);
 }

@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import { getEnv } from './lib/env.js';
 import { closeDb } from './lib/db.js';
 import { runMigrations } from './lib/migrate.js';
@@ -20,11 +21,16 @@ async function main() {
   const env = getEnv();
 
   await runMigrations();
-  await runSeed();
+  if (env.NODE_ENV === 'development') {
+    await runSeed();
+  } else {
+    logInfo(`Seed dilewati — NODE_ENV=${env.NODE_ENV} (hanya jalan otomatis di development)`);
+  }
 
   const app = Fastify({ logger: false });
   await app.register(cors, { origin: env.CORS_ORIGIN, credentials: true });
   await app.register(cookie);
+  await app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
 
   await authRoutes(app);
   await syncRoutes(app);

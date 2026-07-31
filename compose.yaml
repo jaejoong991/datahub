@@ -1,0 +1,38 @@
+# compose.yaml
+#
+# Postgres untuk pengembangan lokal. Aplikasi (backend & frontend) sengaja
+# TIDAK dikontainerkan: keduanya dijalankan native lewat `npm run dev` supaya
+# hot-reload (tsx watch / vite HMR) tetap instan. Yang butuh isolasi cuma
+# database-nya.
+#
+# Port host 5434 — bukan 5432 — karena mesin ini sudah punya Postgres native
+# di 5432 dan kontainer lain di 5433. Sesuaikan DATABASE_URL di backend/.env.
+#
+#   docker compose up -d
+#   docker compose down          # stop, data tetap ada
+#   docker compose down -v       # stop + hapus data
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: datahub-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: datahub
+      POSTGRES_PASSWORD: datahub
+      POSTGRES_DB: datahub
+      # Percepat startup; ini database dev, bukan produksi.
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    ports:
+      - "5434:5432"
+    volumes:
+      - datahub-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U datahub -d datahub"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  datahub-pgdata:

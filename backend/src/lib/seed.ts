@@ -1,8 +1,26 @@
+import { randomBytes } from 'node:crypto';
 import { getDb } from './db.js';
 import { hashPassword, encryptToken } from './crypto.js';
 import { logInfo } from './logger.js';
 
+// Baca SEED_PASSWORD dari env; kalau tidak diset, generate random dan log SEKALI
+// supaya developer bisa login. Tidak pernah fallback ke constant.
+function resolveSeedPassword(): string {
+  const fromEnv = process.env.SEED_PASSWORD;
+  if (fromEnv) return fromEnv;
+  const generated = randomBytes(18).toString('base64url');
+  logInfo(`Seed: SEED_PASSWORD tidak diset — password admin di-generate: ${generated}`);
+  return generated;
+}
+
 export async function runSeed() {
+  // Defense-in-depth: guard ini menahan jalur `npm run seed` manual, yang
+  // memanggil runSeed() langsung dan bypass gate NODE_ENV di index.ts.
+  if (process.env.NODE_ENV === 'production' && process.env.SEED_FORCE !== 'true') {
+    logInfo('Seed ditolak — NODE_ENV=production. Set SEED_FORCE=true untuk override manual.');
+    return;
+  }
+
   const db = getDb();
 
   const existing = await db.selectFrom('app_user').selectAll().execute();
@@ -11,7 +29,7 @@ export async function runSeed() {
     return;
   }
 
-  const pw = await hashPassword('admin123');
+  const pw = await hashPassword(resolveSeedPassword());
 
   await db.insertInto('app_user').values([
     { email: 'admin@toko.id', password_hash: pw, full_name: 'Dewi Lestari', role: 'admin', is_active: true },
