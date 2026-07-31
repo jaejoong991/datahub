@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment — JANGAN commit.
+# backend/.env berisi SESSION_SECRET, ENCRYPTION_KEY, dan DATABASE_URL
+# (lengkap dengan password). Template-nya ada di .env.example.
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
+logs/
+
+# Test & coverage
+coverage/
+.nyc_output/
+
+# Editor & OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Tooling lokal
+.claude/settings.local.json

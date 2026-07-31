@@ -1,0 +1,597 @@
+import { jest } from "@jest/globals";
+import { DiscountManager } from "../../managers/discount.manager.js";
+import { ShopeeRegion } from "../../schemas/region.js";
+import { ShopeeFetch } from "../../fetch.js";
+import { DiscountStatus, } from "../../schemas/discount.js";
+// Mock ShopeeFetch.fetch static method
+const mockFetch = jest.fn();
+ShopeeFetch.fetch = mockFetch;
+describe("DiscountManager", () => {
+    let discountManager;
+    let mockConfig;
+    const mockShopeeFetch = mockFetch;
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockConfig = {
+            partner_id: 12345,
+            partner_key: "test_partner_key",
+            shop_id: 67890,
+            region: ShopeeRegion.GLOBAL,
+            base_url: "https://partner.test-stable.shopeemobile.com/api/v2",
+        };
+        discountManager = new DiscountManager(mockConfig);
+    });
+    describe("addDiscount", () => {
+        it("should add a new discount", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    discount_id: 665123666665499,
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await discountManager.addDiscount({
+                discount_name: "test-create",
+                start_time: 1624864213,
+                end_time: 1625382613,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/discount/add_discount", {
+                method: "POST",
+                auth: true,
+                body: {
+                    discount_name: "test-create",
+                    start_time: 1624864213,
+                    end_time: 1625382613,
+                },
+            });
+            expect(result).toEqual(mockResponse);
+        });
+    });
+    describe("addDiscountItem", () => {
+        it("should add items to a discount", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    discount_id: 665123666665499,
+                    count: 2,
+                    error_list: [],
+                    warning: "",
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await discountManager.addDiscountItem({
+                discount_id: 665123666665499,
+                item_list: [
+                    {
+                        item_id: 800238393,
+                        purchase_limit: 2,
+                        model_list: [
+                            {
+                                model_id: 10004228693,
+                                model_promotion_price: 960,
+                            },
+                        ],
+                    },
+                    {
+                        item_id: 100862614,
+                        purchase_limit: 2,
+                        model_list: [
+                            {
+                                model_id: 10000153738,
+                                model_promotion_price: 460,
+                            },
+                        ],
+                    },
+                ],
+            });
+            expect(result).toEqual(mockResponse);
+        });
+        it("should handle errors when adding items", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    discount_id: 665123666665499,
+                    count: 1,
+                    error_list: [
+                        {
+                            item_id: 800238393,
+                            model_id: 10004228693,
+                            fail_message: "Item not found",
+                            fail_error: "discount.item_not_found",
+                        },
+                    ],
+                    warning: "Some items failed to add",
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await discountManager.addDiscountItem({
+                discount_id: 665123666665499,
+                item_list: [
+                    {
+                        item_id: 800238393,
+                        purchase_limit: 2,
+                        model_list: [
+                            {
+                                model_id: 10004228693,
+                                model_promotion_price: 960,
+                            },
+                        ],
+                    },
+                ],
+            });
+            expect(result.response.error_list).toHaveLength(1);
+            expect(result.response.count).toBe(1);
+        });
+    });
+    describe("deleteDiscount", () => {
+        it("should delete a discount", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    discount_id: 665123666665499,
+                    modify_time: 1610434295,
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await discountManager.deleteDiscount({
+                discount_id: 665123666665499,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/discount/delete_discount", {
+                method: "POST",
+                auth: true,
+                body: {
+                    discount_id: 665123666665499,
+                },
+            });
+            expect(result).toEqual(mockResponse);
+        });
+    });
+    describe("deleteDiscountItem", () => {
+        it("should delete an item from a discount", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    discount_id: 665123666665499,
+                    error_list: [],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await discountManager.deleteDiscountItem({
+                discount_id: 665123666665499,
+                item_id: 100862614,
+                model_id: 10000153738,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/discount/delete_discount_item", {
+                method: "POST",
+                auth: true,
+                body: {
+                    discount_id: 665123666665499,
+                    item_id: 100862614,
+                    model_id: 10000153738,
+                },
+            });
+            expect(result).toEqual(mockResponse);
+        });
+    });
+    describe("endDiscount", () => {
+        it("should end a discount", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    discount_id: 66512366666549900,
+                    modify_time: 1656408546,
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await discountManager.endDiscount({
+                discount_id: 66512366666549900,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/discount/end_discount", {
+                method: "POST",
+                auth: true,
+                body: {
+                    discount_id: 66512366666549900,
+                },
+            });
+            expect(result).toEqual(mockResponse);
+        });
+    });
+    describe("getDiscountList", () => {
+        it("should get a list of discounts", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    discount_list: [
+                        {
+                            status: "ongoing",
+                            discount_name: "testqwert001",
+                            start_time: 1644910200,
+                            discount_id: 1000021581,
+                            source: 0,
+                            end_time: 1645864200,
+                        },
+                        {
+                            status: "ongoing",
+                            discount_name: "testqwerty002",
+                            start_time: 1644910200,
+                            discount_id: 1000021582,
+                            source: 0,
+                            end_time: 1646037000,
+                        },
+                        {
+                            status: "ongoing",
+                            discount_name: "testasdfgxcvyt003",
+                            start_time: 1644909420,
+                            discount_id: 1000021583,
+                            source: 0,
+                            end_time: 1645173000,
+                        },
+                    ],
+                    more: false,
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await discountManager.getDiscountList({
+                discount_status: DiscountStatus.ONGOING,
+                page_no: 1,
+                page_size: 100,
+                update_time_from: 1609459200,
+                update_time_to: 1609545600,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/discount/get_discount_list", {
+                method: "GET",
+                auth: true,
+                params: {
+                    discount_status: "ongoing",
+                    page_no: 1,
+                    page_size: 100,
+                    update_time_from: 1609459200,
+                    update_time_to: 1609545600,
+                },
+            });
+            expect(result).toEqual(mockResponse);
+            expect(result.response.discount_list).toHaveLength(3);
+        });
+        it("should get all discounts", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    discount_list: [
+                        {
+                            status: "ongoing",
+                            discount_name: "testqwert001",
+                            start_time: 1644910200,
+                            discount_id: 1000021581,
+                            end_time: 1645864200,
+                        },
+                    ],
+                    more: false,
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await discountManager.getDiscountList({
+                discount_status: DiscountStatus.ALL,
+            });
+            expect(result.response.discount_list).toHaveLength(1);
+        });
+    });
+    describe("updateDiscount", () => {
+        it("should update a discount", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    discount_id: 661460179119131,
+                    modify_time: 1656408546,
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await discountManager.updateDiscount({
+                discount_id: 661460179119131,
+                start_time: 1656403800,
+                end_time: 1656494739,
+                discount_name: "The discount 111",
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/discount/update_discount", {
+                method: "POST",
+                auth: true,
+                body: {
+                    discount_id: 661460179119131,
+                    start_time: 1656403800,
+                    end_time: 1656494739,
+                    discount_name: "The discount 111",
+                },
+            });
+            expect(result).toEqual(mockResponse);
+        });
+    });
+    describe("updateDiscountItem", () => {
+        it("should update items in a discount", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    discount_id: 1000029745,
+                    count: 1,
+                    error_list: [
+                        {
+                            item_id: 1776783,
+                            model_id: 1776782,
+                            fail_message: "time error",
+                            fail_error: "discount.error_time",
+                        },
+                    ],
+                },
+                warning: "",
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await discountManager.updateDiscountItem({
+                discount_id: 1000029745,
+                item_list: [
+                    {
+                        item_id: 1776783,
+                        purchase_limit: 2,
+                        model_list: [
+                            {
+                                model_id: 0,
+                                model_promotion_price: 96,
+                            },
+                        ],
+                    },
+                    {
+                        item_id: 1778783,
+                        purchase_limit: 2,
+                        item_promotion_price: 11,
+                    },
+                ],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/discount/update_discount_item", {
+                method: "POST",
+                auth: true,
+                body: {
+                    discount_id: 1000029745,
+                    item_list: [
+                        {
+                            item_id: 1776783,
+                            purchase_limit: 2,
+                            model_list: [
+                                {
+                                    model_id: 0,
+                                    model_promotion_price: 96,
+                                },
+                            ],
+                        },
+                        {
+                            item_id: 1778783,
+                            purchase_limit: 2,
+                            item_promotion_price: 11,
+                        },
+                    ],
+                },
+            });
+            expect(result).toEqual(mockResponse);
+            expect(result.response.error_list).toHaveLength(1);
+        });
+    });
+    describe("getSipDiscounts", () => {
+        it("should get all SIP discounts", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    discount_list: [
+                        {
+                            region: "SG",
+                            status: "ongoing",
+                            sip_discount_rate: 10,
+                            start_time: 1741235212,
+                            end_time: 1756787212,
+                            create_time: 1741233412,
+                            update_time: 1741233412,
+                        },
+                        {
+                            region: "TW",
+                            status: "upcoming",
+                            sip_discount_rate: 30,
+                            start_time: 1741687818,
+                            end_time: 1757239818,
+                            create_time: 1741686019,
+                            update_time: 1741686019,
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await discountManager.getSipDiscounts();
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/discount/get_sip_discounts", {
+                method: "GET",
+                auth: true,
+                params: undefined,
+            });
+            expect(result).toEqual(mockResponse);
+            expect(result.response.discount_list).toHaveLength(2);
+        });
+        it("should get SIP discounts for a specific region", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    discount_list: [
+                        {
+                            region: "SG",
+                            status: "ongoing",
+                            sip_discount_rate: 10,
+                            start_time: 1741235212,
+                            end_time: 1756787212,
+                            create_time: 1741233412,
+                            update_time: 1741233412,
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await discountManager.getSipDiscounts({
+                region: "SG",
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/discount/get_sip_discounts", {
+                method: "GET",
+                auth: true,
+                params: {
+                    region: "SG",
+                },
+            });
+            expect(result).toEqual(mockResponse);
+            expect(result.response.discount_list).toHaveLength(1);
+            expect(result.response.discount_list[0].region).toBe("SG");
+        });
+    });
+    describe("setSipDiscount", () => {
+        it("should set a SIP discount", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    region: "TH",
+                    status: "upcoming",
+                    sip_discount_rate: 15,
+                    start_time: 1741688426,
+                    end_time: 1757240426,
+                    create_time: 1741686627,
+                    update_time: 1741686627,
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await discountManager.setSipDiscount({
+                region: "TH",
+                sip_discount_rate: 15,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/discount/set_sip_discount", {
+                method: "POST",
+                auth: true,
+                body: {
+                    region: "TH",
+                    sip_discount_rate: 15,
+                },
+            });
+            expect(result).toEqual(mockResponse);
+            expect(result.response.region).toBe("TH");
+            expect(result.response.sip_discount_rate).toBe(15);
+        });
+        it("should update an existing SIP discount", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    region: "TH",
+                    status: "ongoing",
+                    sip_discount_rate: 20,
+                    start_time: 1741688426,
+                    end_time: 1757240426,
+                    create_time: 1741686627,
+                    update_time: 1741700000,
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await discountManager.setSipDiscount({
+                region: "TH",
+                sip_discount_rate: 20,
+            });
+            expect(result.response.sip_discount_rate).toBe(20);
+            expect(result.response.update_time).toBeGreaterThan(result.response.create_time);
+        });
+    });
+    describe("deleteSipDiscount", () => {
+        it("should delete a SIP discount", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    region: "TW",
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await discountManager.deleteSipDiscount({
+                region: "TW",
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/discount/delete_sip_discount", {
+                method: "POST",
+                auth: true,
+                body: {
+                    region: "TW",
+                },
+            });
+            expect(result).toEqual(mockResponse);
+            expect(result.response.region).toBe("TW");
+        });
+    });
+    describe("getDiscount", () => {
+        it("should get discount details successfully", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    status: "ongoing",
+                    discount_name: "Test Discount",
+                    item_list: [
+                        {
+                            item_id: 123456,
+                            item_name: "Test Item",
+                            normal_stock: 10,
+                            item_promotion_stock: 5,
+                            item_original_price: 100,
+                            item_promotion_price: 80,
+                            purchase_limit: 2,
+                            model_list: [],
+                        },
+                    ],
+                    start_time: 1604408400,
+                    discount_id: 1000029882,
+                    end_time: 1605276000,
+                    more: false,
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await discountManager.getDiscount({
+                discount_id: 1000029882,
+                page_no: 1,
+                page_size: 50,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/discount/get_discount", {
+                method: "GET",
+                auth: true,
+                params: {
+                    discount_id: 1000029882,
+                    page_no: 1,
+                    page_size: 50,
+                },
+            });
+            expect(result).toEqual(mockResponse);
+            expect(result.response.discount_name).toBe("Test Discount");
+        });
+    });
+});
+//# sourceMappingURL=discount.manager.test.js.map

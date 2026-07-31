@@ -1,0 +1,494 @@
+import { jest, describe, beforeEach, it, expect } from "@jest/globals";
+import { ShopeeRegion } from "../schemas/region.js";
+import { ShopeeSdkError } from "../errors.js";
+// Mock fetch function
+const mockFetch = jest.fn();
+// Mock the entire fetch module before importing ShopeeFetch
+jest.unstable_mockModule("node-fetch", () => ({
+    default: mockFetch,
+    Blob: globalThis.Blob,
+    FormData: globalThis.FormData,
+    Headers: globalThis.Headers,
+}));
+// Import ShopeeFetch after mocking
+const { ShopeeFetch } = await import("../fetch.js");
+function getRequestContentType(url, options) {
+    return new Request(url, options).headers.get("content-type");
+}
+describe("ShopeeFetch", () => {
+    let mockConfig;
+    let mockSdk;
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockSdk = {
+            getAuthToken: jest.fn(),
+            refreshToken: jest.fn(),
+        };
+        mockConfig = {
+            partner_id: 12345,
+            partner_key: "test_partner_key",
+            shop_id: 67890,
+            region: ShopeeRegion.GLOBAL,
+            base_url: "https://partner.test-stable.shopeemobile.com/api/v2",
+            sdk: mockSdk,
+        };
+    });
+    describe("fetch method", () => {
+        it("should make successful GET request without auth", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: { data: "test data" },
+            };
+            mockFetch.mockResolvedValueOnce({
+                status: 200,
+                headers: new Map([["content-type", "application/json"]]),
+                json: jest.fn(() => Promise.resolve(mockResponse)),
+            });
+            const result = await ShopeeFetch.fetch(mockConfig, "/test/endpoint");
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            expect(result).toEqual(mockResponse);
+        });
+        it("should make successful POST request with body", async () => {
+            const mockResponse = { success: true };
+            const requestBody = { key: "value" };
+            mockFetch.mockResolvedValueOnce({
+                status: 200,
+                headers: new Map([["content-type", "application/json"]]),
+                json: jest.fn(() => Promise.resolve(mockResponse)),
+            });
+            const result = await ShopeeFetch.fetch(mockConfig, "/test/endpoint", {
+                method: "POST",
+                body: requestBody,
+            });
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            const [, options] = mockFetch.mock.calls[0];
+            expect(options).toBeDefined();
+            expect(options.method).toBe("POST");
+            expect(options.body).toBe(JSON.stringify(requestBody));
+            expect(result).toEqual(mockResponse);
+        });
+        it("should serialize multipart bodies when the payload contains binary fields", async () => {
+            const mockResponse = { success: true };
+            mockFetch.mockResolvedValue({
+                status: 200,
+                headers: new Map([["content-type", "application/json"]]),
+                json: jest.fn(() => Promise.resolve(mockResponse)),
+            });
+            const image = Buffer.from("image-data");
+            await ShopeeFetch.fetch(mockConfig, "/media_space/upload_image", {
+                method: "POST",
+                body: {
+                    scene: "normal",
+                    image,
+                },
+            });
+            const [, options] = mockFetch.mock.calls[0];
+            expect(options).toBeDefined();
+            const formData = options.body;
+            expect(formData).toBeInstanceOf(FormData);
+            expect(formData.get("scene")).toBe("normal");
+            expect(formData.get("image")).toBeInstanceOf(Blob);
+            expect(options.headers.get("content-type")).toBeNull();
+            expect(getRequestContentType(`${mockConfig.base_url}/media_space/upload_image`, options)).toMatch(/^multipart\/form-data; boundary=/);
+        });
+        it("should serialize multipart bodies when the payload contains binary arrays", async () => {
+            const mockResponse = { success: true };
+            mockFetch.mockResolvedValue({
+                status: 200,
+                headers: new Map([["content-type", "application/json"]]),
+                json: jest.fn(() => Promise.resolve(mockResponse)),
+            });
+            const image1 = Buffer.from("image-1");
+            const image2 = Buffer.from("image-2");
+            await ShopeeFetch.fetch(mockConfig, "/media/upload_image", {
+                method: "POST",
+                body: {
+                    business: 2,
+                    scene: 1,
+                    images: [image1, image2],
+                },
+            });
+            const [, options] = mockFetch.mock.calls[0];
+            expect(options).toBeDefined();
+            const formData = options.body;
+            const images = formData.getAll("images");
+            expect(formData).toBeInstanceOf(FormData);
+            expect(formData.get("business")).toBe("2");
+            expect(formData.get("scene")).toBe("1");
+            expect(images).toHaveLength(2);
+            images.forEach((image) => expect(image).toBeInstanceOf(Blob));
+            expect(options.headers.get("content-type")).toBeNull();
+            expect(getRequestContentType(`${mockConfig.base_url}/media/upload_image`, options)).toMatch(/^multipart\/form-data; boundary=/);
+        });
+        it("should pass through FormData bodies without forcing JSON content type", async () => {
+            const mockResponse = { success: true };
+            mockFetch.mockResolvedValue({
+                status: 200,
+                headers: new Map([["content-type", "application/json"]]),
+                json: jest.fn(() => Promise.resolve(mockResponse)),
+            });
+            const formData = new FormData();
+            formData.append("video_upload_id", "upload-id");
+            formData.append("part_content", new Blob([Buffer.from("video-part")]), "part.bin");
+            await ShopeeFetch.fetch(mockConfig, "/media_space/upload_video_part", {
+                method: "POST",
+                body: formData,
+            });
+            const [, options] = mockFetch.mock.calls[0];
+            expect(options).toBeDefined();
+            expect(options.body).toBe(formData);
+            expect(options.headers.get("content-type")).toBeNull();
+            expect(getRequestContentType(`${mockConfig.base_url}/media_space/upload_video_part`, options)).toMatch(/^multipart\/form-data; boundary=/);
+        });
+        it("should serialize multipart bodies with null, undefined, named/unnamed Blobs, and nested objects", async () => {
+            const mockResponse = { success: true };
+            mockFetch.mockResolvedValue({
+                status: 200,
+                headers: new Map([["content-type", "application/json"]]),
+                json: jest.fn(() => Promise.resolve(mockResponse)),
+            });
+            const fileWithFilename = new Blob([Buffer.from("file-1")]);
+            Object.defineProperty(fileWithFilename, "name", {
+                value: "custom-file.txt",
+                writable: false,
+            });
+            const fileWithoutFilename = new Blob([Buffer.from("file-2")]);
+            await ShopeeFetch.fetch(mockConfig, "/media_space/upload_image", {
+                method: "POST",
+                body: {
+                    image: Buffer.from("image-data"),
+                    nullField: null,
+                    undefinedField: undefined,
+                    arrayField: ["string", null, undefined],
+                    namedBlob: fileWithFilename,
+                    unnamedBlob: fileWithoutFilename,
+                    nestedObject: { key: "nested" },
+                },
+            });
+            const [, options] = mockFetch.mock.calls[0];
+            expect(options).toBeDefined();
+            const formData = options.body;
+            expect(formData).toBeInstanceOf(FormData);
+            expect(formData.get("image")).toBeInstanceOf(Blob);
+            expect(formData.get("nullField")).toBeNull();
+            expect(formData.get("undefinedField")).toBeNull();
+            expect(formData.getAll("arrayField")).toEqual(["string"]);
+            expect(formData.get("namedBlob")).toBeInstanceOf(Blob);
+            expect(formData.get("unnamedBlob")).toBeInstanceOf(Blob);
+            expect(formData.get("nestedObject")).toBe(JSON.stringify({ key: "nested" }));
+        });
+        it("should make authenticated request with valid token", async () => {
+            const mockToken = {
+                access_token: "test_access_token",
+                refresh_token: "test_refresh_token",
+                expire_in: 3600,
+                expired_at: Date.now() + 3600000,
+                shop_id: 67890,
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+            };
+            const mockResponse = { data: "authenticated data" };
+            mockSdk.getAuthToken.mockResolvedValue(mockToken);
+            mockFetch.mockResolvedValueOnce({
+                status: 200,
+                headers: new Map([["content-type", "application/json"]]),
+                json: jest.fn(() => Promise.resolve(mockResponse)),
+            });
+            const result = await ShopeeFetch.fetch(mockConfig, "/test/endpoint", {
+                auth: true,
+            });
+            expect(mockSdk.getAuthToken).toHaveBeenCalledTimes(1);
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            const [url] = mockFetch.mock.calls[0];
+            expect(url).toContain("access_token=test_access_token");
+            expect(url).toContain("shop_id=67890");
+            expect(result).toEqual(mockResponse);
+        });
+        it("should refresh token when expired and retry request", async () => {
+            const expiredToken = {
+                access_token: "expired_token",
+                refresh_token: "test_refresh_token",
+                expire_in: 3600,
+                expired_at: Date.now() - 1000, // Expired
+                shop_id: 67890,
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+            };
+            const newToken = {
+                access_token: "new_access_token",
+                refresh_token: "new_refresh_token",
+                expire_in: 3600,
+                expired_at: Date.now() + 3600000,
+                shop_id: 67890,
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+            };
+            const mockResponse = { data: "authenticated data" };
+            mockSdk.getAuthToken.mockResolvedValue(expiredToken);
+            mockSdk.refreshToken.mockResolvedValue(newToken);
+            mockFetch.mockResolvedValueOnce({
+                status: 200,
+                headers: new Map([["content-type", "application/json"]]),
+                json: jest.fn(() => Promise.resolve(mockResponse)),
+            });
+            const result = await ShopeeFetch.fetch(mockConfig, "/test/endpoint", {
+                auth: true,
+            });
+            expect(mockSdk.getAuthToken).toHaveBeenCalledTimes(1);
+            expect(mockSdk.refreshToken).toHaveBeenCalledTimes(1);
+            expect(result).toEqual(mockResponse);
+        });
+        it("should throw error when no access token found", async () => {
+            mockSdk.getAuthToken.mockResolvedValue(null);
+            await expect(ShopeeFetch.fetch(mockConfig, "/test/endpoint", { auth: true })).rejects.toThrow(ShopeeSdkError);
+            await expect(ShopeeFetch.fetch(mockConfig, "/test/endpoint", { auth: true })).rejects.toThrow("No access token found");
+        });
+        it("should handle invalid access token error and retry after refresh", async () => {
+            const invalidTokenResponse = {
+                error: "invalid_acceess_token",
+                message: "Invalid access token",
+                request_id: "test-request-id",
+            };
+            const successResponse = { data: "success after refresh" };
+            const mockToken = {
+                access_token: "old_token",
+                refresh_token: "refresh_token",
+                expire_in: 3600,
+                expired_at: Date.now() + 3600000,
+                shop_id: 67890,
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+            };
+            mockSdk.getAuthToken.mockResolvedValue(mockToken);
+            mockSdk.refreshToken.mockResolvedValue(mockToken);
+            // First call returns invalid token error, second call succeeds
+            mockFetch
+                .mockResolvedValueOnce({
+                status: 401,
+                headers: new Map([["content-type", "application/json"]]),
+                json: jest.fn(() => Promise.resolve(invalidTokenResponse)),
+            })
+                .mockResolvedValueOnce({
+                status: 200,
+                headers: new Map([["content-type", "application/json"]]),
+                json: jest.fn(() => Promise.resolve(successResponse)),
+            });
+            const result = await ShopeeFetch.fetch(mockConfig, "/test/endpoint", {
+                auth: true,
+            });
+            expect(mockSdk.refreshToken).toHaveBeenCalledTimes(1);
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+            expect(result).toEqual(successResponse);
+        });
+        it("should include custom headers in request", async () => {
+            const mockResponse = { data: "test" };
+            const customHeaders = {
+                "X-Custom-Header": "custom-value",
+            };
+            mockFetch.mockResolvedValueOnce({
+                status: 200,
+                headers: new Map([["content-type", "application/json"]]),
+                json: jest.fn(() => Promise.resolve(mockResponse)),
+            });
+            await ShopeeFetch.fetch(mockConfig, "/test/endpoint", {
+                headers: customHeaders,
+            });
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            const [, options] = mockFetch.mock.calls[0];
+            expect(options).toBeDefined();
+            expect(options.headers.get("X-Custom-Header")).toBe("custom-value");
+        });
+        it("should include User-Agent header with SDK version", async () => {
+            const mockResponse = { data: "test" };
+            mockFetch.mockResolvedValueOnce({
+                status: 200,
+                headers: new Map([["content-type", "application/json"]]),
+                json: jest.fn(() => Promise.resolve(mockResponse)),
+            });
+            await ShopeeFetch.fetch(mockConfig, "/test/endpoint");
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            const [, options] = mockFetch.mock.calls[0];
+            expect(options).toBeDefined();
+            const userAgent = options.headers.get("user-agent");
+            expect(userAgent).toMatch(/^congminh1254\/shopee-sdk\/v\d+\.\d+\.\d+$/);
+        });
+        it("should include query parameters in URL", async () => {
+            const mockResponse = { data: "test" };
+            const params = {
+                param1: "value1",
+                param2: 123,
+                param3: ["array1", "array2"],
+            };
+            mockFetch.mockResolvedValueOnce({
+                status: 200,
+                headers: new Map([["content-type", "application/json"]]),
+                json: jest.fn(() => Promise.resolve(mockResponse)),
+            });
+            await ShopeeFetch.fetch(mockConfig, "/test/endpoint", {
+                params,
+            });
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            const [url] = mockFetch.mock.calls[0];
+            expect(url).toContain("param1=value1");
+            expect(url).toContain("param2=123");
+            expect(url).toContain("param3=array1");
+            expect(url).toContain("param3=array2");
+        });
+        it("should remove undefined query parameters from URL", async () => {
+            const mockResponse = { data: "test" };
+            const params = {
+                param1: "value1",
+                param2: undefined,
+            };
+            mockFetch.mockResolvedValueOnce({
+                status: 200,
+                headers: new Map([["content-type", "application/json"]]),
+                json: jest.fn(() => Promise.resolve(mockResponse)),
+            });
+            await ShopeeFetch.fetch(mockConfig, "/test/endpoint", {
+                params,
+            });
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            const [url] = mockFetch.mock.calls[0];
+            expect(url).toContain("param1=value1");
+            expect(url).not.toContain("param2");
+        });
+        it("should handle invalid access token error when refresh fails", async () => {
+            const invalidTokenResponse = {
+                error: "invalid_acceess_token",
+                message: "Invalid access token",
+                request_id: "test-request-id",
+            };
+            const mockToken = {
+                access_token: "old_token",
+                refresh_token: "refresh_token",
+                expire_in: 3600,
+                expired_at: Date.now() + 3600000,
+                shop_id: 67890,
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+            };
+            mockSdk.getAuthToken.mockResolvedValue(mockToken);
+            mockSdk.refreshToken.mockRejectedValue(new Error("Refresh failed"));
+            mockFetch.mockResolvedValueOnce({
+                status: 401,
+                headers: new Map([["content-type", "application/json"]]),
+                json: jest.fn(() => Promise.resolve(invalidTokenResponse)),
+            });
+            await expect(ShopeeFetch.fetch(mockConfig, "/test/endpoint", { auth: true })).rejects.toThrow("API Error: 401");
+        });
+        it("should throw ShopeeApiError when API returns error", async () => {
+            const errorResponse = {
+                error: "error_code",
+                message: "Error message",
+                request_id: "test-request-id",
+            };
+            mockFetch.mockResolvedValueOnce({
+                status: 400,
+                headers: new Map([["content-type", "application/json"]]),
+                json: jest.fn(() => Promise.resolve(errorResponse)),
+            });
+            await expect(ShopeeFetch.fetch(mockConfig, "/test/endpoint")).rejects.toThrow("API Error: 400");
+        });
+        it("should throw error for unknown response type", async () => {
+            const headers = new Map([["content-type", "text/html"]]);
+            mockFetch.mockResolvedValueOnce({
+                status: 200,
+                headers: {
+                    get: (name) => headers.get(name.toLowerCase()),
+                },
+                text: jest.fn(() => Promise.resolve("<html>Not JSON</html>")),
+                json: jest.fn(),
+            });
+            await expect(ShopeeFetch.fetch(mockConfig, "/test/endpoint")).rejects.toThrow("Unknown response type");
+        });
+        it("should return Buffer for application/pdf response", async () => {
+            const text = "%PDF-1.4 test pdf content";
+            const uint8 = new TextEncoder().encode(text);
+            const headers = new Map([["content-type", "application/pdf"]]);
+            mockFetch.mockResolvedValueOnce({
+                status: 200,
+                headers: {
+                    get: (name) => headers.get(name.toLowerCase()),
+                },
+                arrayBuffer: jest.fn(() => Promise.resolve(uint8.buffer)),
+            });
+            const result = await ShopeeFetch.fetch(mockConfig, "/test/endpoint");
+            expect(result).toBeInstanceOf(Buffer);
+            expect(result.toString()).toBe(text);
+        });
+        it("should return Buffer for application/octet-stream response", async () => {
+            const text = "binary data";
+            const uint8 = new TextEncoder().encode(text);
+            const headers = new Map([["content-type", "application/octet-stream"]]);
+            mockFetch.mockResolvedValueOnce({
+                status: 200,
+                headers: {
+                    get: (name) => headers.get(name.toLowerCase()),
+                },
+                arrayBuffer: jest.fn(() => Promise.resolve(uint8.buffer)),
+            });
+            const result = await ShopeeFetch.fetch(mockConfig, "/test/endpoint");
+            expect(result).toBeInstanceOf(Buffer);
+            expect(result.toString()).toBe(text);
+        });
+        it("should handle network errors", async () => {
+            const networkError = new Error("Network failed");
+            networkError.name = "FetchError";
+            mockFetch.mockRejectedValueOnce(networkError);
+            await expect(ShopeeFetch.fetch(mockConfig, "/test/endpoint")).rejects.toThrow("Network error: Network failed");
+        });
+        it("should handle unexpected errors", async () => {
+            const unexpectedError = new Error("Unexpected error");
+            mockFetch.mockRejectedValueOnce(unexpectedError);
+            await expect(ShopeeFetch.fetch(mockConfig, "/test/endpoint")).rejects.toThrow("Unexpected error: Unexpected error");
+        });
+        it("should handle unknown non-Error exceptions", async () => {
+            mockFetch.mockRejectedValueOnce("string error");
+            await expect(ShopeeFetch.fetch(mockConfig, "/test/endpoint")).rejects.toThrow("Unknown error occurred");
+        });
+        it("should handle null body correctly", async () => {
+            const mockResponse = { success: true };
+            mockFetch.mockResolvedValueOnce({
+                status: 200,
+                headers: new Map([["content-type", "application/json"]]),
+                json: jest.fn(() => Promise.resolve(mockResponse)),
+            });
+            await ShopeeFetch.fetch(mockConfig, "/test/endpoint", {
+                method: "POST",
+                body: null,
+            });
+            const [, options] = mockFetch.mock.calls[0];
+            expect(options).toBeDefined();
+            expect(options.body).toBe("null");
+        });
+        it("should serialize multipart bodies with fallback isBlobLike conditions", async () => {
+            const mockResponse = { success: true };
+            mockFetch.mockResolvedValueOnce({
+                status: 200,
+                headers: new Map([["content-type", "application/json"]]),
+                json: jest.fn(() => Promise.resolve(mockResponse)),
+            });
+            await ShopeeFetch.fetch(mockConfig, "/media_space/upload_image", {
+                method: "POST",
+                body: {
+                    image: Buffer.from("image-data"),
+                    nullProto: Object.create(null),
+                },
+            });
+            const [, options] = mockFetch.mock.calls[0];
+            expect(options).toBeDefined();
+            const formData = options.body;
+            expect(formData).toBeInstanceOf(FormData);
+            expect(formData.get("image")).toBeInstanceOf(Blob);
+        });
+    });
+});
+//# sourceMappingURL=fetch.test.js.map

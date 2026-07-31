@@ -1,0 +1,11 @@
+/* Ulinary Design System — token layer, diimpor dari proyek Claude Design.
+   Jangan edit isi tokens/*. Kalau desain diperbarui, timpa folder itu.
+   Penyesuaian khusus aplikasi ditulis di app.css. */
+@import "./tokens/colors.css";
+@import "./tokens/typography.css";
+@import "./tokens/spacing.css";
+
+/* Tema: default <body class="theme-graphite"> di index.html.
+   Ulinary aslinya sistem F&B (primary oranye "sunset"); untuk konteks
+   keuangan, graphite/cobalt lebih netral dan tidak bertabrakan dengan
+   semantik warning/danger di tabel angka. */

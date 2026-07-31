@@ -1,0 +1,59 @@
+/* ===========================================================
+   Ulinary — Spacing, Radii, Shadows, Layout, Motion
+   -----------------------------------------------------------
+   Radii / shadows / layout / motion tokens match the live app
+   token names exactly (--r-*, --shadow-*, --header-h, --ease-*).
+   =========================================================== */
+
+:root {
+  /* === Spacing scale (4px base) === */
+  --space-0:  0;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* === Radii === */
+  --r-1:    4px;    /* chips, tiny inputs */
+  --r-2:    6px;    /* buttons, inputs */
+  --r-3:    10px;   /* nested cards, menu */
+  --r-4:    14px;   /* cards, panels */
+  --r-5:    18px;   /* dialogs, large surfaces */
+  --r-pill: 999px;
+
+  /* === Shadows (soft, layered, warm cast) === */
+  --shadow-xs:  0 1px 2px rgba(40, 28, 16, 0.04), 0 0 0 1px rgba(40, 28, 16, 0.03);
+  --shadow-sm:  0 1px 2px rgba(40, 28, 16, 0.05), 0 1px 3px rgba(40, 28, 16, 0.06);
+  --shadow-md:  0 4px 8px -2px rgba(40, 28, 16, 0.06), 0 2px 4px rgba(40, 28, 16, 0.04);
+  --shadow-lg:  0 12px 24px -6px rgba(40, 28, 16, 0.08), 0 4px 8px rgba(40, 28, 16, 0.04);
+  --shadow-pop: 0 16px 40px -12px rgba(40, 28, 16, 0.18), 0 4px 12px -4px rgba(40, 28, 16, 0.08);
+  /* primary-tinted glow for hero CTAs */
+  --shadow-primary: 0 8px 24px -6px color-mix(in srgb, var(--primary) 45%, transparent);
+
+  /* === Layout === */
+  --header-h:            60px;
+  --sidebar-w:           256px;
+  --sidebar-w-collapsed: 64px;
+  --footer-h:            44px;
+  --content-max:         1400px;
+
+  /* === Motion === */
+  --ease-out:    cubic-bezier(0.2, 0.8, 0.2, 1);   /* @kind other */
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);     /* @kind other */
+  --t-fast:  120ms;   /* @kind other */
+  --t-base:  180ms;   /* @kind other */
+  --t-slow:  260ms;   /* @kind other */
+
+  /* === Semantic aliases === */
+  --surface-card:   var(--surface-1);
+  --surface-page:   var(--surface-0);
+  --radius-control: var(--r-2);
+  --radius-card:    var(--r-4);
+}

@@ -1,0 +1,100 @@
+{
+  "name": "@congminh1254/shopee-sdk",
+  "version": "1.13.0",
+  "description": "Shopee SDK maintaining by community",
+  "type": "module",
+  "main": "./lib/sdk.js",
+  "exports": {
+    ".": {
+      "import": "./lib/sdk.js",
+      "types": "./lib/sdk.d.ts"
+    },
+    "./schemas": {
+      "import": "./lib/schemas/index.js",
+      "types": "./lib/schemas/index.d.ts"
+    },
+    "./schemas/*": {
+      "import": "./lib/schemas/*.js",
+      "types": "./lib/schemas/*.d.ts"
+    },
+    "./managers": {
+      "import": "./lib/managers/index.js",
+      "types": "./lib/managers/index.d.ts"
+    },
+    "./managers/*": {
+      "import": "./lib/managers/*.js",
+      "types": "./lib/managers/*.d.ts"
+    },
+    "./storage": {
+      "import": "./lib/storage/index.js",
+      "types": "./lib/storage/index.d.ts"
+    },
+    "./storage/*": {
+      "import": "./lib/storage/*.js",
+      "types": "./lib/storage/*.d.ts"
+    }
+  },
+  "files": [
+    "lib/**/*"
+  ],
+  "scripts": {
+    "prebuild": "node scripts/generate-version.js",
+    "build": "npm run prebuild && node --loader ts-node/esm node_modules/.bin/tsc",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:sandbox": "dotenv -- tsx src/__tests__/utils/init.ts",
+    "auth:sandbox": "dotenv -- tsx src/__tests__/utils/init.ts --auth-only",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "lint": "eslint \"src/**/*.ts\"",
+    "fetch-schemas": "tsx schemas/fetch.ts",
+    "audit:specs": "tsx scripts/audit-specs.ts",
+    "docs:build": "typedoc && cp llms.txt docs/api/llms.txt && touch docs/api/.nojekyll",
+    "prepare": "husky"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/congminh1254/shopee-sdk.git"
+  },
+  "keywords": [
+    "shopee",
+    "sdks",
+    "nodejs"
+  ],
+  "author": "Minh Nguyen Cong",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/congminh1254/shopee-sdk/issues"
+  },
+  "homepage": "https://github.com/congminh1254/shopee-sdk#readme",
+  "devDependencies": {
+    "@commitlint/cli": "^20.5.2",
+    "@commitlint/config-conventional": "^20.5.0",
+    "@eslint/js": "^10.0.1",
+    "@types/jest": "^30.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.0",
+    "@typescript-eslint/parser": "^8.59.0",
+    "dotenv": "^17.4.2",
+    "dotenv-cli": "^11.0.0",
+    "eslint": "^10.2.1",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.5.0",
+    "husky": "^9.1.7",
+    "jest": "^30.4.2",
+    "playwright": "^1.60.0",
+    "prettier": "^3.8.3",
+    "ts-jest": "^29.4.10",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typedoc": "^0.28.19",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
+}

@@ -1,0 +1,88 @@
+/* ===========================================================
+   Ulinary — Base layer
+   Body defaults + small brand utility primitives carried over
+   from the live app (.scm-card, .scm-btn-*, .scm-live).
+   Tokens are defined in tokens/*; this file only consumes them.
+   =========================================================== */
+
+body {
+  margin: 0;
+  background-color: var(--surface-0);
+  color: var(--ink-1);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--lh-base);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--primary) 24%, transparent);
+}
+
+/* Numeric / tabular text helper */
+.scm-mono {
+  font-family: var(--font-mono);
+  font-feature-settings: 'tnum', 'cv01';
+}
+
+/* Card primitive */
+.scm-card {
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-4);
+  overflow: hidden;
+}
+.scm-card-head { padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
+.scm-card-body { padding: 16px 18px; }
+
+/* Button primitives */
+.scm-btn-primary {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  font: var(--fw-semibold) var(--text-sm)/1 var(--font-sans);
+  border-radius: var(--r-2);
+  background: var(--primary);
+  color: var(--primary-on);
+  border: 1px solid transparent;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--t-fast) var(--ease-out);
+}
+.scm-btn-primary:hover {
+  background: var(--primary-strong);
+  transform: translateY(-0.5px);
+  box-shadow: var(--shadow-md);
+}
+.scm-btn-primary:active { transform: translateY(0); }
+
+.scm-btn-secondary {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  font: var(--fw-semibold) var(--text-sm)/1 var(--font-sans);
+  border-radius: var(--r-2);
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  color: var(--ink-1);
+  cursor: pointer;
+  transition: all var(--t-fast) var(--ease-out);
+}
+.scm-btn-secondary:hover { border-color: var(--line-strong); background: var(--surface-2); }
+
+/* Live / online indicator (header, footer, charts) */
+.scm-live {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: var(--fw-semibold);
+  color: var(--success);
+}
+.scm-live .scm-live-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--success);
+  animation: scm-live-pulse 2s ease-out infinite;
+}
+@keyframes scm-live-pulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 50%, transparent); }
+  100% { box-shadow: 0 0 0 8px transparent; }
+}

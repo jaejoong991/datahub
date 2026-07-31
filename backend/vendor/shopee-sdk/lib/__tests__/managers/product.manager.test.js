@@ -1,0 +1,2357 @@
+import { jest } from "@jest/globals";
+import { ProductManager } from "../../managers/product.manager.js";
+import { ShopeeRegion } from "../../schemas/region.js";
+import { ShopeeFetch } from "../../fetch.js";
+import { ItemStatus, } from "../../schemas/product.js";
+// Mock ShopeeFetch.fetch static method
+const mockFetch = jest.fn();
+ShopeeFetch.fetch = mockFetch;
+describe("ProductManager", () => {
+    let productManager;
+    let mockConfig;
+    const mockShopeeFetch = mockFetch;
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockConfig = {
+            partner_id: 12345,
+            partner_key: "test_partner_key",
+            shop_id: 67890,
+            region: ShopeeRegion.GLOBAL,
+            base_url: "https://partner.test-stable.shopeemobile.com/api/v2",
+        };
+        productManager = new ProductManager(mockConfig);
+    });
+    describe("getComment", () => {
+        it("should get product comments with required parameters", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item_comment_list: [
+                        {
+                            order_sn: "ORDER123",
+                            comment_id: 123,
+                            comment: "Great product!",
+                            buyer_username: "user123",
+                            item_id: 789,
+                            model_id: 0,
+                            model_id_list: [1001],
+                            rating_star: 5,
+                            editable: "EDITABLE",
+                            hidden: false,
+                            create_time: 1234567890,
+                            media: {
+                                image_url_list: [],
+                                video_url_list: [],
+                            },
+                        },
+                    ],
+                    more: false,
+                    next_cursor: "",
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getComment({
+                item_id: 789,
+                comment_id: 123,
+                cursor: "",
+                page_size: 10,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_comment", {
+                method: "GET",
+                auth: true,
+                params: {
+                    item_id: 789,
+                    comment_id: 123,
+                    cursor: "",
+                    page_size: 10,
+                },
+            });
+            expect(result).toEqual(mockResponse);
+        });
+        it("should get comments with minimal required parameters", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item_comment_list: [],
+                    more: false,
+                    next_cursor: "",
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getComment({
+                cursor: "",
+                page_size: 10,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_comment", {
+                method: "GET",
+                auth: true,
+                params: {
+                    cursor: "",
+                    page_size: 10,
+                },
+            });
+            expect(result).toEqual(mockResponse);
+        });
+    });
+    describe("replyComment", () => {
+        it("should reply to a product comment", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    result_list: [
+                        {
+                            comment_id: 123,
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.replyComment({
+                comment_list: [
+                    {
+                        comment_id: 123,
+                        comment: "Thank you for your feedback!",
+                    },
+                ],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/reply_comment", {
+                method: "POST",
+                auth: true,
+                body: {
+                    comment_list: [
+                        {
+                            comment_id: 123,
+                            comment: "Thank you for your feedback!",
+                        },
+                    ],
+                },
+            });
+            expect(result).toEqual(mockResponse);
+        });
+    });
+    describe("getItemList", () => {
+        it("should get item list with pagination", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item: [
+                        {
+                            item_id: 123456,
+                            item_status: ItemStatus.NORMAL,
+                            update_time: 1234567890,
+                        },
+                        {
+                            item_id: 789012,
+                            item_status: ItemStatus.BANNED,
+                            update_time: 1234567891,
+                        },
+                    ],
+                    total_count: 2,
+                    has_next_page: false,
+                    next_offset: 0,
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getItemList({
+                offset: 0,
+                page_size: 50,
+                update_time_from: 1234567800,
+                update_time_to: 1234567900,
+                item_status: [ItemStatus.NORMAL],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_item_list", {
+                method: "GET",
+                auth: true,
+                params: {
+                    offset: 0,
+                    page_size: 50,
+                    update_time_from: 1234567800,
+                    update_time_to: 1234567900,
+                    item_status: [ItemStatus.NORMAL],
+                },
+            });
+            expect(result).toEqual(mockResponse);
+        });
+        it("should get item list with minimal parameters", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item: [],
+                    total_count: 0,
+                    has_next_page: false,
+                    next_offset: 0,
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getItemList({
+                offset: 0,
+                page_size: 10,
+                item_status: [ItemStatus.NORMAL],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_item_list", {
+                method: "GET",
+                auth: true,
+                params: {
+                    offset: 0,
+                    page_size: 10,
+                    item_status: [ItemStatus.NORMAL],
+                },
+            });
+            expect(result).toEqual(mockResponse);
+        });
+    });
+    describe("getItemBaseInfo", () => {
+        it("should get item base info for multiple items", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item_list: [
+                        {
+                            item_id: 123456,
+                            category_id: 100001,
+                            item_name: "Test Product 1",
+                            item_sku: "SKU-001",
+                            create_time: 1234567890,
+                            update_time: 1234567891,
+                            item_status: ItemStatus.NORMAL,
+                            has_model: false,
+                            condition: "NEW",
+                            size_chart: "",
+                            item_dangerous: 0,
+                        },
+                        {
+                            item_id: 789012,
+                            category_id: 100002,
+                            item_name: "Test Product 2",
+                            item_sku: "SKU-002",
+                            create_time: 1234567892,
+                            update_time: 1234567893,
+                            item_status: ItemStatus.NORMAL,
+                            has_model: true,
+                            condition: "USED",
+                            size_chart: "size_chart_url",
+                            item_dangerous: 0,
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getItemBaseInfo({
+                item_id_list: [123456, 789012],
+                need_tax_info: false,
+                need_complaint_policy: true,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_item_base_info", {
+                method: "GET",
+                auth: true,
+                params: {
+                    item_id_list: "123456,789012",
+                    need_tax_info: false,
+                    need_complaint_policy: true,
+                },
+            });
+            expect(result).toEqual(mockResponse);
+        });
+        it("should get item base info for single item", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item_list: [
+                        {
+                            item_id: 123456,
+                            category_id: 100001,
+                            item_name: "Single Product",
+                            item_sku: "SKU-SINGLE",
+                            create_time: 1234567890,
+                            update_time: 1234567891,
+                            item_status: ItemStatus.NORMAL,
+                            has_model: false,
+                            condition: "NEW",
+                            size_chart: "",
+                            item_dangerous: 0,
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getItemBaseInfo({
+                item_id_list: [123456],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_item_base_info", {
+                method: "GET",
+                auth: true,
+                params: {
+                    item_id_list: "123456",
+                },
+            });
+            expect(result).toEqual(mockResponse);
+        });
+    });
+    describe("getModelList", () => {
+        it("should get model list for an item", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    tier_variation: [
+                        {
+                            name: "Color",
+                            option_list: [
+                                { option: "Red", image: { image_id: "img1" } },
+                                { option: "Blue", image: { image_id: "img2" } },
+                            ],
+                        },
+                        {
+                            name: "Size",
+                            option_list: [{ option: "S" }, { option: "M" }, { option: "L" }],
+                        },
+                    ],
+                    model: [
+                        {
+                            model_id: 1001,
+                            tier_index: [0, 0],
+                            price_info: [
+                                {
+                                    current_price: 29.99,
+                                    original_price: 29.99,
+                                    inflated_price_of_original_price: 29.99,
+                                    inflated_price_of_current_price: 29.99,
+                                },
+                            ],
+                            stock_info_v2: {
+                                summary_info: {
+                                    total_available_stock: 100,
+                                    total_reserved_stock: 5,
+                                },
+                            },
+                            model_sku: "SKU-RED-S",
+                            gtin_code: "123456789012",
+                        },
+                        {
+                            model_id: 1002,
+                            tier_index: [0, 1],
+                            price_info: [
+                                {
+                                    current_price: 29.99,
+                                    original_price: 29.99,
+                                    inflated_price_of_original_price: 29.99,
+                                    inflated_price_of_current_price: 29.99,
+                                },
+                            ],
+                            stock_info_v2: {
+                                summary_info: {
+                                    total_available_stock: 150,
+                                    total_reserved_stock: 10,
+                                },
+                            },
+                            model_sku: "SKU-RED-M",
+                            gtin_code: "123456789013",
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getModelList({
+                item_id: 123456,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_model_list", {
+                method: "GET",
+                auth: true,
+                params: {
+                    item_id: 123456,
+                },
+            });
+            expect(result).toEqual(mockResponse);
+        });
+    });
+    describe("updatePrice", () => {
+        it("should update product price successfully", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    success_list: [
+                        {
+                            model_id: 0,
+                            original_price: 99.99,
+                        },
+                    ],
+                    failure_list: [],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.updatePrice({
+                item_id: 123456,
+                price_list: [
+                    {
+                        model_id: 0,
+                        original_price: 99.99,
+                    },
+                ],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/update_price", {
+                method: "POST",
+                auth: true,
+                body: {
+                    item_id: 123456,
+                    price_list: [
+                        {
+                            model_id: 0,
+                            original_price: 99.99,
+                        },
+                    ],
+                },
+            });
+            expect(result).toEqual(mockResponse);
+        });
+        it("should update multiple model prices", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    success_list: [
+                        {
+                            model_id: 1001,
+                            original_price: 49.99,
+                        },
+                        {
+                            model_id: 1002,
+                            original_price: 59.99,
+                        },
+                    ],
+                    failure_list: [],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.updatePrice({
+                item_id: 123456,
+                price_list: [
+                    {
+                        model_id: 1001,
+                        original_price: 49.99,
+                    },
+                    {
+                        model_id: 1002,
+                        original_price: 59.99,
+                    },
+                ],
+            });
+            expect(result.response.success_list).toHaveLength(2);
+            expect(result).toEqual(mockResponse);
+        });
+        it("should handle price update failures", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    success_list: [],
+                    failure_list: [
+                        {
+                            model_id: 1001,
+                            failed_reason: "Price too low",
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.updatePrice({
+                item_id: 123456,
+                price_list: [
+                    {
+                        model_id: 1001,
+                        original_price: 0.01,
+                    },
+                ],
+            });
+            expect(result.response.failure_list).toHaveLength(1);
+            expect(result.response.failure_list?.[0].failed_reason).toBe("Price too low");
+        });
+    });
+    describe("updateStock", () => {
+        it("should update product stock successfully", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    success_list: [
+                        {
+                            model_id: 0,
+                            seller_stock: [
+                                {
+                                    stock: 100,
+                                },
+                            ],
+                        },
+                    ],
+                    failure_list: [],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.updateStock({
+                item_id: 123456,
+                stock_list: [
+                    {
+                        model_id: 0,
+                        seller_stock: [
+                            {
+                                stock: 100,
+                            },
+                        ],
+                    },
+                ],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/update_stock", {
+                method: "POST",
+                auth: true,
+                body: {
+                    item_id: 123456,
+                    stock_list: [
+                        {
+                            model_id: 0,
+                            seller_stock: [
+                                {
+                                    stock: 100,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            });
+            expect(result).toEqual(mockResponse);
+        });
+        it("should update stock with location_id", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    success_list: [
+                        {
+                            model_id: 1001,
+                            seller_stock: [
+                                {
+                                    location_id: "LOC-001",
+                                    stock: 50,
+                                },
+                            ],
+                        },
+                    ],
+                    failure_list: [],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.updateStock({
+                item_id: 123456,
+                stock_list: [
+                    {
+                        model_id: 1001,
+                        seller_stock: [
+                            {
+                                location_id: "LOC-001",
+                                stock: 50,
+                            },
+                        ],
+                    },
+                ],
+            });
+            expect(result.response.success_list?.[0].seller_stock[0].location_id).toBe("LOC-001");
+        });
+        it("should handle stock update failures", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    success_list: [],
+                    failure_list: [
+                        {
+                            model_id: 1001,
+                            failed_reason: "Insufficient stock",
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.updateStock({
+                item_id: 123456,
+                stock_list: [
+                    {
+                        model_id: 1001,
+                        seller_stock: [
+                            {
+                                stock: -10,
+                            },
+                        ],
+                    },
+                ],
+            });
+            expect(result.response.failure_list).toHaveLength(1);
+        });
+    });
+    describe("deleteItem", () => {
+        it("should delete a product item successfully", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                warning: "",
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.deleteItem({
+                item_id: 123456,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/delete_item", {
+                method: "POST",
+                auth: true,
+                body: {
+                    item_id: 123456,
+                },
+            });
+            expect(result).toEqual(mockResponse);
+            expect(result.error).toBe("");
+        });
+        it("should handle delete item error", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "error_item_not_found",
+                message: "Item_id is not found.",
+                warning: "",
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.deleteItem({
+                item_id: 999999,
+            });
+            expect(result.error).toBe("error_item_not_found");
+            expect(result.message).toBe("Item_id is not found.");
+        });
+    });
+    describe("unlistItem", () => {
+        it("should unlist items successfully", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    result: [
+                        {
+                            item_id: 123456,
+                            success: true,
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.unlistItem({
+                item_list: [
+                    {
+                        item_id: 123456,
+                        unlist: true,
+                    },
+                ],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/unlist_item", {
+                method: "POST",
+                auth: true,
+                body: {
+                    item_list: [
+                        {
+                            item_id: 123456,
+                            unlist: true,
+                        },
+                    ],
+                },
+            });
+            expect(result).toEqual(mockResponse);
+            expect(result.response.result?.[0].success).toBe(true);
+        });
+        it("should list items (unlist=false)", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    result: [
+                        {
+                            item_id: 123456,
+                            success: true,
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.unlistItem({
+                item_list: [
+                    {
+                        item_id: 123456,
+                        unlist: false,
+                    },
+                ],
+            });
+            expect(result.response.result?.[0].success).toBe(true);
+        });
+        it("should handle multiple items with mixed results", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    result: [
+                        {
+                            item_id: 123456,
+                            success: true,
+                        },
+                        {
+                            item_id: 789012,
+                            success: false,
+                            failed_reason: "Item not found",
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.unlistItem({
+                item_list: [
+                    {
+                        item_id: 123456,
+                        unlist: true,
+                    },
+                    {
+                        item_id: 789012,
+                        unlist: true,
+                    },
+                ],
+            });
+            expect(result.response.result).toHaveLength(2);
+            expect(result.response.result?.[0].success).toBe(true);
+            expect(result.response.result?.[1].success).toBe(false);
+        });
+    });
+    describe("getCategory", () => {
+        it("should get category list with default language", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    category_list: [
+                        {
+                            category_id: 100001,
+                            parent_category_id: 0,
+                            category_name: "Electronics",
+                            has_children: true,
+                        },
+                        {
+                            category_id: 100002,
+                            parent_category_id: 100001,
+                            category_name: "Mobile Phones",
+                            has_children: false,
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getCategory();
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_category", {
+                method: "GET",
+                auth: true,
+                params: {},
+            });
+            expect(result).toEqual(mockResponse);
+            expect(result.response.category_list).toHaveLength(2);
+        });
+        it("should get category list with specific language", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    category_list: [
+                        {
+                            category_id: 100001,
+                            parent_category_id: 0,
+                            category_name: "电子产品",
+                            has_children: true,
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getCategory({
+                language: "zh-hans",
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_category", {
+                method: "GET",
+                auth: true,
+                params: {
+                    language: "zh-hans",
+                },
+            });
+            expect(result.response.category_list[0].category_name).toBe("电子产品");
+        });
+        it("should handle empty category list", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    category_list: [],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getCategory();
+            expect(result.response.category_list).toEqual([]);
+        });
+    });
+    describe("addItem", () => {
+        it("should add a new item successfully", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item_id: 123456,
+                    warning: [],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.addItem({
+                original_price: 99.99,
+                description: "Test product description",
+                item_name: "Test Product",
+                category_id: 100001,
+                image: {
+                    image_id_list: ["img123"],
+                },
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/add_item", {
+                method: "POST",
+                auth: true,
+                body: expect.objectContaining({
+                    original_price: 99.99,
+                    description: "Test product description",
+                    item_name: "Test Product",
+                    category_id: 100001,
+                }),
+            });
+            expect(result.response.item_id).toBe(123456);
+        });
+    });
+    describe("updateItem", () => {
+        it("should update an item successfully", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item_id: 123456,
+                    warning: [],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.updateItem({
+                item_id: 123456,
+                item_name: "Updated Product Name",
+                original_price: 149.99,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/update_item", {
+                method: "POST",
+                auth: true,
+                body: {
+                    item_id: 123456,
+                    item_name: "Updated Product Name",
+                    original_price: 149.99,
+                },
+            });
+            expect(result.response.item_id).toBe(123456);
+        });
+    });
+    describe("addModel", () => {
+        it("should add models to an item", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    model_id_list: [1001, 1002],
+                    warning: [],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.addModel({
+                item_id: 123456,
+                model_list: [
+                    {
+                        tier_index: [0, 0],
+                        original_price: 99.99,
+                        normal_stock: 100,
+                    },
+                    {
+                        tier_index: [0, 1],
+                        original_price: 109.99,
+                        normal_stock: 50,
+                    },
+                ],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/add_model", {
+                method: "POST",
+                auth: true,
+                body: expect.objectContaining({
+                    item_id: 123456,
+                }),
+            });
+            expect(result.response.model_id_list).toHaveLength(2);
+        });
+    });
+    describe("updateModel", () => {
+        it("should update models successfully", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    model_id_list: [1001],
+                    warning: [],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.updateModel({
+                item_id: 123456,
+                model_list: [
+                    {
+                        model_id: 1001,
+                        original_price: 119.99,
+                    },
+                ],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/update_model", {
+                method: "POST",
+                auth: true,
+                body: expect.objectContaining({
+                    item_id: 123456,
+                }),
+            });
+            expect(result.response.model_id_list).toContain(1001);
+        });
+    });
+    describe("deleteModel", () => {
+        it("should delete models successfully", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    success: true,
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.deleteModel({
+                item_id: 123456,
+                model_id_list: [1001, 1002],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/delete_model", {
+                method: "POST",
+                auth: true,
+                body: {
+                    item_id: 123456,
+                    model_id_list: [1001, 1002],
+                },
+            });
+            expect(result.response.success).toBe(true);
+        });
+    });
+    describe("initTierVariation", () => {
+        it("should initialize tier variations", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    model_id_list: [2001, 2002],
+                    warning: [],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.initTierVariation({
+                item_id: 123456,
+                tier_variation: [
+                    {
+                        name: "Color",
+                        option_list: [{ option: "Red" }, { option: "Blue" }],
+                    },
+                ],
+                model: [
+                    {
+                        tier_index: [0],
+                        original_price: 99.99,
+                        normal_stock: 50,
+                    },
+                    {
+                        tier_index: [1],
+                        original_price: 99.99,
+                        normal_stock: 50,
+                    },
+                ],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/init_tier_variation", {
+                method: "POST",
+                auth: true,
+                body: expect.objectContaining({
+                    item_id: 123456,
+                }),
+            });
+            expect(result.response.model_id_list).toHaveLength(2);
+        });
+    });
+    describe("updateTierVariation", () => {
+        it("should update tier variations", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                warning: "",
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.updateTierVariation({
+                item_id: 123456,
+                tier_variation: [
+                    {
+                        name: "Size",
+                        option_list: [{ option: "S" }, { option: "M" }, { option: "L" }],
+                    },
+                ],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/update_tier_variation", {
+                method: "POST",
+                auth: true,
+                body: expect.objectContaining({
+                    item_id: 123456,
+                }),
+            });
+            expect(result.error).toBe("");
+        });
+    });
+    describe("searchItem", () => {
+        it("should search items successfully", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item: [
+                        {
+                            item_id: 123456,
+                            item_status: ItemStatus.NORMAL,
+                            update_time: 1234567890,
+                        },
+                    ],
+                    total_count: 1,
+                    has_next_page: false,
+                    next_offset: 0,
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.searchItem({
+                item_name: "Test Product",
+                offset: 0,
+                page_size: 20,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/search_item", {
+                method: "GET",
+                auth: true,
+                params: {
+                    item_name: "Test Product",
+                    offset: 0,
+                    page_size: 20,
+                },
+            });
+            expect(result.response.item).toHaveLength(1);
+        });
+    });
+    describe("getItemExtraInfo", () => {
+        it("should get item extra info successfully", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item_list: [
+                        {
+                            item_id: 123456,
+                            sale_info: {
+                                sale: 100,
+                                sale_7d: 50,
+                                sale_30d: 200,
+                            },
+                            view: 1000,
+                            liked_count: 50,
+                            cmt_count: 20,
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getItemExtraInfo({
+                item_id_list: [123456, 789012],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_item_extra_info", {
+                method: "GET",
+                auth: true,
+                params: {
+                    item_id_list: "123456,789012",
+                },
+            });
+            expect(result.response.item_list[0].sale_info.sale).toBe(100);
+        });
+    });
+    describe("getAttributeTree", () => {
+        it("should get attribute tree for a category", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    attribute_list: [
+                        {
+                            attribute_id: 1001,
+                            original_attribute_name: "Brand",
+                            is_mandatory: true,
+                            input_type: "DROP_DOWN",
+                            attribute_value_list: [
+                                {
+                                    value_id: 2001,
+                                    original_value_name: "Nike",
+                                },
+                            ],
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getAttributeTree({
+                category_id: 100001,
+                language: "en",
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_attribute_tree", {
+                method: "GET",
+                auth: true,
+                params: {
+                    category_id: 100001,
+                    language: "en",
+                },
+            });
+            expect(result.response.attribute_list).toHaveLength(1);
+        });
+    });
+    describe("getBrandList", () => {
+        it("should get brand list successfully", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    brand_list: [
+                        {
+                            brand_id: 1,
+                            original_brand_name: "Nike",
+                            display_brand_name: "Nike",
+                        },
+                        {
+                            brand_id: 2,
+                            original_brand_name: "Adidas",
+                            display_brand_name: "Adidas",
+                        },
+                    ],
+                    has_next_page: false,
+                    next_offset: 0,
+                    is_mandatory: true,
+                    input_type: "DROP_DOWN",
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getBrandList({
+                category_id: 100001,
+                offset: 0,
+                page_size: 20,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_brand_list", {
+                method: "GET",
+                auth: true,
+                params: {
+                    category_id: 100001,
+                    offset: 0,
+                    page_size: 20,
+                },
+            });
+            expect(result.response.brand_list).toHaveLength(2);
+        });
+    });
+    describe("registerBrand", () => {
+        it("should register a new brand", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    brand_id: 12345,
+                    original_brand_name: "NewBrand",
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.registerBrand({
+                category_id: 100001,
+                original_brand_name: "NewBrand",
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/register_brand", {
+                method: "POST",
+                auth: true,
+                body: {
+                    category_id: 100001,
+                    original_brand_name: "NewBrand",
+                },
+            });
+            expect(result.response.brand_id).toBe(12345);
+        });
+    });
+    describe("categoryRecommend", () => {
+        it("should get category recommendations", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    category_id_list: [100001, 100002, 100003],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.categoryRecommend({
+                item_name: "Running Shoes",
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/category_recommend", {
+                method: "GET",
+                auth: true,
+                params: {
+                    item_name: "Running Shoes",
+                },
+            });
+            expect(result.response.category_id_list).toHaveLength(3);
+        });
+    });
+    describe("getItemLimit", () => {
+        it("should get item limits for a category", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item_limit: {
+                        max_image_count: 9,
+                        max_video_count: 1,
+                        max_product_title_length: 120,
+                        max_description_length: 3000,
+                        max_extended_description_length: 25000,
+                        is_video_required: false,
+                    },
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getItemLimit({
+                category_id: 100001,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_item_limit", {
+                method: "GET",
+                auth: true,
+                params: {
+                    category_id: 100001,
+                },
+            });
+            expect(result.response.item_limit.max_image_count).toBe(9);
+        });
+    });
+    describe("getItemPromotion", () => {
+        it("should get item promotion information", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item_promotion_list: [
+                        {
+                            item_id: 123456,
+                            promotion_list: [
+                                {
+                                    promotion_id: 9001,
+                                    promotion_type: 1,
+                                    start_time: 1609459200,
+                                    end_time: 1612137600,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getItemPromotion({
+                item_id_list: [123456],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_item_promotion", {
+                method: "GET",
+                auth: true,
+                params: {
+                    item_id_list: "123456",
+                },
+            });
+            expect(result.response.item_promotion_list[0].promotion_list).toHaveLength(1);
+        });
+    });
+    describe("boostItem", () => {
+        it("should boost items successfully", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    failed_item_id_list: [],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.boostItem({
+                item_id_list: [123456, 789012],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/boost_item", {
+                method: "POST",
+                auth: true,
+                body: {
+                    item_id_list: [123456, 789012],
+                },
+            });
+            expect(result.response.failed_item_id_list).toEqual([]);
+        });
+    });
+    describe("getBoostedList", () => {
+        it("should get list of boosted items", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item_list: [
+                        {
+                            item_id: 123456,
+                            boost_end_time: 1640995200,
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getBoostedList();
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_boosted_list", {
+                method: "GET",
+                auth: true,
+                params: {},
+            });
+            expect(result.response.item_list).toHaveLength(1);
+        });
+    });
+    describe("getRecommendAttribute", () => {
+        it("should get recommended attributes", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    recommended_attribute_list: [
+                        {
+                            attribute_id: 1001,
+                            recommended_value_list: [
+                                {
+                                    value_id: 2001,
+                                    original_value_name: "Cotton",
+                                },
+                            ],
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getRecommendAttribute({
+                category_id: 100001,
+                item_name: "T-Shirt",
+                cover_image_id: 12345,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_recommend_attribute", {
+                method: "GET",
+                auth: true,
+                params: {
+                    category_id: 100001,
+                    item_name: "T-Shirt",
+                    cover_image_id: 12345,
+                },
+            });
+            expect(result.response.recommended_attribute_list).toHaveLength(1);
+        });
+    });
+    describe("searchAttributeValueList", () => {
+        it("should search attribute values", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    attribute_value_list: [
+                        {
+                            value_id: 2001,
+                            original_value_name: "Cotton",
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.searchAttributeValueList({
+                category_id: 100001,
+                attribute_id: 1001,
+                search_value: "Cotton",
+                value_name: "Cotton Soft",
+                cursor: 10,
+                limit: 50,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/search_attribute_value_list", {
+                method: "POST",
+                auth: true,
+                body: {
+                    category_id: 100001,
+                    attribute_id: 1001,
+                    search_value: "Cotton",
+                    value_name: "Cotton Soft",
+                    cursor: 10,
+                    limit: 50,
+                },
+            });
+            expect(result.response.attribute_value_list).toHaveLength(1);
+        });
+    });
+    describe("getMainItemList", () => {
+        it("should get main item list successfully", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item: [
+                        {
+                            item_id: 123456,
+                            item_status: ItemStatus.NORMAL,
+                            update_time: 1234567890,
+                        },
+                    ],
+                    total_count: 1,
+                    has_next_page: false,
+                    next_offset: 0,
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getMainItemList({
+                offset: 0,
+                page_size: 20,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_main_item_list", {
+                method: "GET",
+                auth: true,
+                params: {
+                    offset: 0,
+                    page_size: 20,
+                },
+            });
+            expect(result.response.item).toHaveLength(1);
+        });
+    });
+    describe("getItemViolationInfo", () => {
+        it("should get item violation information", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item_violation_list: [
+                        {
+                            item_id: 123456,
+                            violation_list: [
+                                {
+                                    violation_type: "DESCRIPTION",
+                                    violation_reason: "Prohibited content",
+                                    violated_item_info: ["description"],
+                                },
+                            ],
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getItemViolationInfo({
+                item_id_list: [123456],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_item_violation_info", {
+                method: "GET",
+                auth: true,
+                params: {
+                    item_id_list: "123456",
+                },
+            });
+            expect(result.response.item_violation_list[0].violation_list).toHaveLength(1);
+        });
+    });
+    describe("getWeightRecommendation", () => {
+        it("should get weight recommendation", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    weight: 1.5,
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getWeightRecommendation({
+                category_id: 100001,
+                item_name: "T-Shirt",
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_weight_recommendation", {
+                method: "POST",
+                auth: true,
+                body: {
+                    category_id: 100001,
+                    item_name: "T-Shirt",
+                },
+            });
+            expect(result.response.weight).toBe(1.5);
+        });
+    });
+    describe("getDirectItemList", () => {
+        it("should get direct item list", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item: [
+                        {
+                            item_id: 123456,
+                            category_id: 100001,
+                            item_name: "Direct Item",
+                            item_status: ItemStatus.NORMAL,
+                            update_time: 1234567890,
+                        },
+                    ],
+                    total_count: 1,
+                    has_next_page: false,
+                    next_offset: 0,
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getDirectItemList({
+                offset: 0,
+                page_size: 20,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_direct_item_list", {
+                method: "GET",
+                auth: true,
+                params: {
+                    offset: 0,
+                    page_size: 20,
+                },
+            });
+            expect(result.response.item).toHaveLength(1);
+        });
+    });
+    describe("getItemContentDiagnosisResult", () => {
+        it("should get item content diagnosis results", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item_list: [
+                        {
+                            item_id: 123456,
+                            status: "PASSED",
+                            failed_field_list: [],
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getItemContentDiagnosisResult({
+                item_id_list: [123456],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_item_content_diagnosis_result", {
+                method: "POST",
+                auth: true,
+                body: {
+                    item_id_list: [123456],
+                },
+            });
+            expect(result.response.item_list[0].status).toBe("PASSED");
+        });
+    });
+    describe("getItemListByContentDiagnosis", () => {
+        it("should get items filtered by content diagnosis", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item: [
+                        {
+                            item_id: 123456,
+                            item_status: ItemStatus.NORMAL,
+                            update_time: 1234567890,
+                        },
+                    ],
+                    total_count: 1,
+                    has_next_page: false,
+                    next_offset: 0,
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getItemListByContentDiagnosis({
+                status: "PASSED",
+                offset: 0,
+                page_size: 20,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_item_list_by_content_diagnosis", {
+                method: "POST",
+                auth: true,
+                body: {
+                    status: "PASSED",
+                    offset: 0,
+                    page_size: 20,
+                },
+            });
+            expect(result.response.item).toHaveLength(1);
+        });
+    });
+    // Specialized function tests (simplified due to 'any' types)
+    describe("specialized functions", () => {
+        it("should call addKitItem", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: { item_id: 123456 },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.addKitItem({ item_setting: "data" });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/add_kit_item", {
+                method: "POST",
+                auth: true,
+                body: { item_setting: "data" },
+            });
+            expect(result.response.item_id).toBe(123456);
+        });
+        it("should call updateKitItem", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                warning: "",
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.updateKitItem({ item_id: 123456 });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/update_kit_item", {
+                method: "POST",
+                auth: true,
+                body: { item_id: 123456 },
+            });
+            expect(result.error).toBe("");
+        });
+        it("should call getKitItemInfo", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: { item_list: [{ item_id: 123456 }] },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getKitItemInfo({
+                item_id_list: [123456],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_kit_item_info", {
+                method: "GET",
+                auth: true,
+                params: {
+                    item_id_list: "123456",
+                },
+            });
+            expect(result.response.item_list).toHaveLength(1);
+        });
+        it("should call getKitItemLimit", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: { item_limit: { max_items: 10 } },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getKitItemLimit({
+                category_id: 100001,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_kit_item_limit", {
+                method: "GET",
+                auth: true,
+                params: {
+                    category_id: 100001,
+                },
+            });
+            expect(result.response.item_limit).toBeDefined();
+        });
+        it("should call generateKitImage", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    image_info: { image_id: "img123", image_url: "http://example.com/img.jpg" },
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.generateKitImage({
+                image_id_list: ["img1", "img2"],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/generate_kit_image", {
+                method: "POST",
+                auth: true,
+                body: {
+                    image_id_list: ["img1", "img2"],
+                },
+            });
+            expect(result.response.image_info).toBeDefined();
+        });
+        it("should call updateSipItemPrice", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                warning: "",
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.updateSipItemPrice({
+                item_id: 123456,
+                sip_item_price: 99.99,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/update_sip_item_price", {
+                method: "POST",
+                auth: true,
+                body: {
+                    item_id: 123456,
+                    sip_item_price: 99.99,
+                },
+            });
+            expect(result.error).toBe("");
+        });
+        it("should call getSizeChartList", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    size_chart_list: [{ size_chart_id: 700024641 }],
+                    total_count: 1,
+                    next_cursor: "",
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getSizeChartList({
+                category_id: 12345,
+                page_size: 10,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_size_chart_list", {
+                method: "GET",
+                auth: true,
+                params: {
+                    category_id: 12345,
+                    page_size: 10,
+                },
+            });
+            expect(result.response.size_chart_list).toHaveLength(1);
+        });
+        it("should call getSizeChartDetail", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: { size_chart: { chart_id: "chart1" } },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getSizeChartDetail({
+                size_chart_id: "chart1",
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_size_chart_detail", {
+                method: "GET",
+                auth: true,
+                params: {
+                    size_chart_id: "chart1",
+                },
+            });
+            expect(result.response.size_chart).toBeDefined();
+        });
+        it("should call getAllVehicleList", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: { vehicle_list: [{ vehicle_id: 1 }] },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getAllVehicleList();
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_all_vehicle_list", {
+                method: "GET",
+                auth: true,
+                params: {},
+            });
+            expect(result.response.vehicle_list).toHaveLength(1);
+        });
+        it("should call getVehicleListByCompatibilityDetail", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: { vehicle_list: [{ vehicle_id: 1 }] },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getVehicleListByCompatibilityDetail({
+                item_id: 123456,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_vehicle_list_by_compatibility_detail", {
+                method: "GET",
+                auth: true,
+                params: {
+                    item_id: 123456,
+                },
+            });
+            expect(result.response.vehicle_list).toHaveLength(1);
+        });
+        it("should call getAitemByPitemId", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: { item_list: [{ item_id: 123456 }] },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getAitemByPitemId({
+                pitem_id_list: [789012],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_aitem_by_pitem_id", {
+                method: "GET",
+                auth: true,
+                params: {
+                    pitem_id_list: "789012",
+                },
+            });
+            expect(result.response.item_list).toHaveLength(1);
+        });
+        it("should call getDirectShopRecommendedPrice", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: { recommended_price: 99.99 },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getDirectShopRecommendedPrice({
+                category_id: 100001,
+                item_name: "Test Item",
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_direct_shop_recommended_price", {
+                method: "GET",
+                auth: true,
+                params: {
+                    category_id: 100001,
+                    item_name: "Test Item",
+                },
+            });
+            expect(result.response.recommended_price).toBe(99.99);
+        });
+        it("should call getProductCertificationRule", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: { certification_list: [{ cert_id: 1 }] },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getProductCertificationRule({
+                category_id: 100001,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_product_certification_rule", {
+                method: "POST",
+                auth: true,
+                body: {
+                    category_id: 100001,
+                },
+            });
+            expect(result.response.certification_list).toHaveLength(1);
+        });
+        it("should call searchUnpackagedModelList", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: { model_list: [{ model_id: 1001 }] },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.searchUnpackagedModelList({
+                item_id: 123456,
+                search_value: "test",
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/search_unpackaged_model_list", {
+                method: "POST",
+                auth: true,
+                body: {
+                    item_id: 123456,
+                    search_value: "test",
+                },
+            });
+            expect(result.response.model_list).toHaveLength(1);
+        });
+    });
+    describe("getMartItemMappingById", () => {
+        it("should get mart item mapping by id successfully", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item_mapping_list: [
+                        {
+                            mart_item_id: 111111,
+                            outlet_item_id: 333333,
+                            model_mapping: [
+                                {
+                                    mart_model_id: 1001,
+                                    outlet_model_id: 2001,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getMartItemMappingById({
+                mart_item_id: 111111,
+                outlet_shop_id_list: [222222, 444444],
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_mart_item_mapping_by_id", {
+                method: "POST",
+                auth: true,
+                body: {
+                    mart_item_id: 111111,
+                    outlet_shop_id_list: [222222, 444444],
+                },
+            });
+            expect(result.error).toBe("");
+            expect(result.response?.item_mapping_list).toHaveLength(1);
+            expect(result.response?.item_mapping_list?.[0].mart_item_id).toBe(111111);
+            expect(result.response?.item_mapping_list?.[0].outlet_item_id).toBe(333333);
+        });
+        it("should handle error when getting mart item mapping", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "error_param",
+                message: "Invalid mart_item_id",
+                response: {
+                    item_mapping_list: [],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getMartItemMappingById({
+                mart_item_id: 999999,
+                outlet_shop_id_list: [222222],
+            });
+            expect(result.error).toBe("error_param");
+            expect(result.message).toBe("Invalid mart_item_id");
+        });
+    });
+    describe("getMartItemByOutletItemId", () => {
+        it("should get mart item mapping by outlet item id successfully", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item_mapping_list: [
+                        {
+                            mart_item_id: 111111,
+                            outlet_item_id: 333333,
+                            model_mapping: [
+                                {
+                                    mart_model_id: 123,
+                                    outlet_model_id: 456,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getMartItemByOutletItemId({
+                outlet_item_id: 333333,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_mart_item_by_outlet_item_id", {
+                method: "POST",
+                auth: true,
+                body: {
+                    outlet_item_id: 333333,
+                },
+            });
+            expect(result.error).toBe("");
+            expect(result.response?.item_mapping_list).toHaveLength(1);
+            expect(result.response?.item_mapping_list?.[0].mart_item_id).toBe(111111);
+        });
+    });
+    describe("publishItemToOutletShop", () => {
+        it("should publish item to outlet shop successfully", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item_id: 333333,
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.publishItemToOutletShop({
+                mart_item_id: 111111,
+                outlet_shop_id: 222222,
+                publish_item: {
+                    model: [
+                        {
+                            relate_mart_model_id: 0,
+                            original_price: 99.99,
+                            seller_stock: [{ stock: 100 }],
+                            pre_order: { is_pre_order: false },
+                        },
+                    ],
+                },
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/publish_item_to_outlet_shop", {
+                method: "POST",
+                auth: true,
+                body: {
+                    mart_item_id: 111111,
+                    outlet_shop_id: 222222,
+                    publish_item: {
+                        model: [
+                            {
+                                relate_mart_model_id: 0,
+                                original_price: 99.99,
+                                seller_stock: [{ stock: 100 }],
+                                pre_order: { is_pre_order: false },
+                            },
+                        ],
+                    },
+                },
+            });
+            expect(result.error).toBe("");
+            expect(result.response?.item_id).toBe(333333);
+        });
+        it("should publish item with full config including logistics and purchase limits", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    item_id: 444444,
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.publishItemToOutletShop({
+                mart_item_id: 111111,
+                outlet_shop_id: 222222,
+                publish_item: {
+                    model: [
+                        {
+                            relate_mart_model_id: 100001,
+                            original_price: 150.0,
+                            seller_stock: [{ location_id: "LOC001", stock: 50 }],
+                            pre_order: { is_pre_order: false },
+                        },
+                        {
+                            relate_mart_model_id: 100002,
+                            original_price: 200.0,
+                            seller_stock: [{ location_id: "LOC001", stock: 30 }],
+                            pre_order: { is_pre_order: true, days_to_ship: 5 },
+                        },
+                    ],
+                    logistic_info: [
+                        {
+                            logistic_id: 90001,
+                            enabled: true,
+                            shipping_fee: 5.0,
+                            is_free: false,
+                        },
+                    ],
+                    purchase_limit_info: {
+                        min_purchase_limit: 1,
+                        max_purchase_limit: { purchase_limit: 10 },
+                    },
+                },
+            });
+            expect(result.error).toBe("");
+            expect(result.response?.item_id).toBe(444444);
+        });
+    });
+    describe("getVariations", () => {
+        it("should get standardized tier variations for a category", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    standardise_variation_list: [
+                        {
+                            variation_id: 101054,
+                            variation_name: "Color",
+                            variation_group_list: [
+                                {
+                                    variation_group_id: 849982774362112,
+                                    variation_group_name: "Group 1",
+                                    variation_option_list: [
+                                        {
+                                            variation_option_id: 6245,
+                                            variation_option_name: "Green",
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
+            };
+            mockShopeeFetch.mockResolvedValue(mockResponse);
+            const result = await productManager.getVariations({
+                category_id: 100001,
+            });
+            expect(mockShopeeFetch).toHaveBeenCalledWith(mockConfig, "/product/get_variations", {
+                method: "GET",
+                auth: true,
+                params: {
+                    category_id: 100001,
+                },
+            });
+            expect(result).toEqual(mockResponse);
+            expect(result.response.standardise_variation_list).toHaveLength(1);
+        });
+    });
+    describe("batchAddItem", () => {
+        it("should batch add items and return task id", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    task_id: 123456,
+                },
+            };
+            mockFetch.mockResolvedValue(mockResponse);
+            const params = {
+                item_list: [
+                    {
+                        original_price: 123.3,
+                        description: "Test description",
+                        weight: 1.1,
+                        item_name: "Test Batch Item",
+                        category_id: 100001,
+                        image: {
+                            image_id_list: ["img1"],
+                        },
+                    },
+                ],
+            };
+            const result = await productManager.batchAddItem(params);
+            expect(mockFetch).toHaveBeenCalledWith(mockConfig, "/product/batch_add_item", {
+                method: "POST",
+                auth: true,
+                body: params,
+            });
+            expect(result).toEqual(mockResponse);
+            expect(result.response.task_id).toBe(123456);
+        });
+    });
+    describe("batchPublishItemToOutletShop", () => {
+        it("should batch publish items to outlet shop and return task id", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    task_id: 234567,
+                },
+            };
+            mockFetch.mockResolvedValue(mockResponse);
+            const params = {
+                item_list: [
+                    {
+                        mart_item_id: 123456789,
+                        outlet_shop_id: 987654321,
+                        publish_item: {
+                            model: [
+                                {
+                                    relate_mart_model_id: 0,
+                                    original_price: 19.99,
+                                    seller_stock: [{ location_id: "LOC001", stock: 100 }],
+                                    pre_order: { is_pre_order: false },
+                                },
+                            ],
+                        },
+                    },
+                ],
+            };
+            const result = await productManager.batchPublishItemToOutletShop(params);
+            expect(mockFetch).toHaveBeenCalledWith(mockConfig, "/product/batch_publish_item_to_outlet_shop", {
+                method: "POST",
+                auth: true,
+                body: params,
+            });
+            expect(result).toEqual(mockResponse);
+            expect(result.response.task_id).toBe(234567);
+        });
+    });
+    describe("batchUpdateOutletPrice", () => {
+        it("should batch update outlet price and return task id", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    task_id: 345678,
+                },
+            };
+            mockFetch.mockResolvedValue(mockResponse);
+            const params = {
+                item_list: [
+                    {
+                        outlet_shop_id: 987654321,
+                        item_id: 123456789,
+                        price_list: [
+                            {
+                                model_id: 111111,
+                                original_price: 24.99,
+                            },
+                        ],
+                    },
+                ],
+            };
+            const result = await productManager.batchUpdateOutletPrice(params);
+            expect(mockFetch).toHaveBeenCalledWith(mockConfig, "/product/batch_update_outlet_price", {
+                method: "POST",
+                auth: true,
+                body: params,
+            });
+            expect(result).toEqual(mockResponse);
+            expect(result.response.task_id).toBe(345678);
+        });
+    });
+    describe("batchUpdateOutletStock", () => {
+        it("should batch update outlet stock and return task id", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    task_id: 456789,
+                },
+            };
+            mockFetch.mockResolvedValue(mockResponse);
+            const params = {
+                item_list: [
+                    {
+                        outlet_shop_id: 987654321,
+                        item_id: 123456789,
+                        stock_list: [
+                            {
+                                model_id: 111111,
+                                seller_stock: [
+                                    {
+                                        location_id: "LOC001",
+                                        stock: 150,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            };
+            const result = await productManager.batchUpdateOutletStock(params);
+            expect(mockFetch).toHaveBeenCalledWith(mockConfig, "/product/batch_update_outlet_stock", {
+                method: "POST",
+                auth: true,
+                body: params,
+            });
+            expect(result).toEqual(mockResponse);
+            expect(result.response.task_id).toBe(456789);
+        });
+    });
+    describe("getBatchTaskResult", () => {
+        it("should get batch task result", async () => {
+            const mockResponse = {
+                request_id: "test-request-id",
+                error: "",
+                message: "",
+                response: {
+                    publish_status: 2,
+                    success_list: [
+                        {
+                            shop_id: 987654321,
+                            item_id: 123456789,
+                            model_id: 111111,
+                        },
+                    ],
+                    failed_list: [],
+                },
+            };
+            mockFetch.mockResolvedValue(mockResponse);
+            const params = {
+                task_type: 4,
+                task_id: 123456789012,
+            };
+            const result = await productManager.getBatchTaskResult(params);
+            expect(mockFetch).toHaveBeenCalledWith(mockConfig, "/product/get_batch_task_result", {
+                method: "GET",
+                auth: true,
+                params,
+            });
+            expect(result).toEqual(mockResponse);
+            expect(result.response.publish_status).toBe(2);
+            expect(result.response.success_list).toHaveLength(1);
+        });
+    });
+    describe("Default Params Coverage", () => {
+        it("should cover ProductManager methods with default parameters", async () => {
+            mockFetch.mockResolvedValue({ response: {} });
+            await productManager.getMainItemList(undefined);
+            await productManager.getDirectItemList(undefined);
+            await productManager.getBatchTaskResult(undefined);
+            expect(mockFetch).toHaveBeenCalledTimes(3);
+        });
+    });
+});
+//# sourceMappingURL=product.manager.test.js.map

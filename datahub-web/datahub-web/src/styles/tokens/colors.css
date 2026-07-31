@@ -1,0 +1,171 @@
+/* ===========================================================
+   Ulinary — Color Tokens
+   -----------------------------------------------------------
+   Drop-in compatible with the live Next.js app: every token
+   name (--primary*, --surface-*, --ink-*, --line*, semantic,
+   theme variants, .dark) matches what the runtime theming
+   engine in /settings (colorUtils.ts) reads and overrides.
+
+   What changed vs the original: the DEFAULT primary moved from
+   flat clay-red to a bolder, more appetizing SUNSET ORANGE, and
+   a codified data-viz accent set + brand tokens were added.
+   The original "clay" red is preserved as a theme preset.
+   =========================================================== */
+
+:root {
+  /* === Primary — "Sunset" (default Ulinary brand orange) ===
+     Warm, energetic, appetite-driven. The user picks their own
+     via /settings; colorUtils overrides these four at runtime. */
+  --primary:        oklch(0.67 0.175 48);   /* ~#F26A1B sunset orange */
+  --primary-strong: oklch(0.58 0.17 44);    /* ~#D1530C deeper, hover/press */
+  --primary-soft:   oklch(0.93 0.05 58);    /* ~#FCE6D2 tinted fill */
+  --primary-tint:   oklch(0.97 0.025 60);   /* ~#FDF4EC faint wash */
+  --primary-on:     #ffffff;                /* text/icon on primary */
+
+  /* === Neutrals (warm, slight cream cast) === */
+  --ink-1: oklch(0.22 0.012 60);   /* headings / primary text */
+  --ink-2: oklch(0.42 0.012 60);   /* body text */
+  --ink-3: oklch(0.58 0.01 60);    /* secondary / captions / placeholder */
+  --ink-4: oklch(0.72 0.008 60);   /* disabled / faint */
+
+  /* surface-0 = page/body background.
+     surface-1 = card / panel / header / sidebar / dialog.
+     surface-2 = subtle fill / hover / toolbar.
+     surface-3 = elevated / nested fill.
+     All four are overridden by the panel-color engine + .dark. */
+  --surface-0: #ffffff;
+  --surface-1: #ffffff;
+  --surface-2: #f6f3ee;
+  --surface-3: #efe9e0;
+
+  --line:        oklch(0.91 0.012 70);   /* hairline borders */
+  --line-strong: oklch(0.84 0.018 68);   /* hover / emphasized borders */
+
+  /* === Semantic === */
+  --success:      oklch(0.62 0.13 152);
+  --success-soft: oklch(0.94 0.045 152);
+  --warning:      oklch(0.74 0.15 72);
+  --warning-soft: oklch(0.95 0.06 80);
+  --danger:       oklch(0.6 0.18 28);
+  --danger-soft:  oklch(0.94 0.05 28);
+  --info:         oklch(0.6 0.13 240);
+  --info-soft:    oklch(0.94 0.045 240);
+
+  /* === Data-viz / accent palette ===
+     Codified from the live sidebar + chart palettes. Use in
+     rotation for KPI cards, nav icon chips, charts, badges. */
+  --accent-saffron: #f59e0b;
+  --accent-basil:   #10b981;
+  --accent-blue:    #3b82f6;
+  --accent-grape:   #8b5cf6;
+  --accent-tomato:  #ef4444;
+  --accent-cyan:    #06b6d4;
+  --accent-pink:    #ec4899;
+  --accent-lime:    #84cc16;
+
+  /* === Brand (F&B legacy tokens, kept for compatibility) === */
+  --brand-saffron:  #ffbc0d;   /* yellowMcD */
+  --brand-tomato:   #e63946;   /* redTomato */
+  --brand-chilli:   #c8102e;   /* redChilliPaper */
+  --brand-cream:    #fcf7e6;   /* paperColorLight */
+  --brand-basil:    #6dbe45;   /* greenFresh */
+}
+
+/* ===========================================================
+   Theme variants — set on <body> / wrapper, e.g.
+   <body class="theme-clay">. Mirrors the /settings presets.
+   The runtime engine writes inline --primary* on :root, which
+   wins over these; the classes are the static fallback set.
+   =========================================================== */
+.theme-sunset  { /* default — same as :root */ }
+
+/* ── Modern palette set (added on request) ───────────────── */
+.theme-teal {                                   /* Teal Basil — fresh food-tech */
+  --primary:        #0ea5a0;
+  --primary-strong: #0b7e7a;
+  --primary-soft:   #d3f0ef;
+  --primary-tint:   #eef9f8;
+}
+.theme-cerise {                                 /* Cerise Berry — bold & modern */
+  --primary:        #e11d6b;
+  --primary-strong: #b01754;
+  --primary-soft:   #fbdce9;
+  --primary-tint:   #fdf0f5;
+}
+.theme-violet {                                 /* Violet Electric */
+  --primary:        #6d5ef6;
+  --primary-strong: #5346d4;
+  --primary-soft:   #e6e3fd;
+  --primary-tint:   #f4f3fe;
+}
+.theme-cobalt {                                 /* Cobalt Blue */
+  --primary:        #2563eb;
+  --primary-strong: #1d4fc0;
+  --primary-soft:   #dde8fd;
+  --primary-tint:   #f0f5fe;
+}
+.theme-graphite {                               /* Graphite + Lime — premium */
+  --primary:        #1f2937;
+  --primary-strong: #0f1729;
+  --primary-soft:   #e5e7eb;
+  --primary-tint:   #f3f4f6;
+}
+
+.theme-clay {                                   /* original default */
+  --primary:        #ef4444;
+  --primary-strong: #ba3434;
+  --primary-soft:   #fde7e7;
+  --primary-tint:   #fef5f5;
+}
+.theme-emerald {
+  --primary:        #2a8f6a;
+  --primary-strong: #216f53;
+  --primary-soft:   #def0e8;
+  --primary-tint:   #f1f9f5;
+}
+.theme-indigo {
+  --primary:        #5b56d0;
+  --primary-strong: #4743a2;
+  --primary-soft:   #e6e5f8;
+  --primary-tint:   #f4f4fc;
+}
+.theme-saffron {
+  --primary:        #f59e0b;
+  --primary-strong: #bf7c08;
+  --primary-soft:   #fdf0d6;
+  --primary-tint:   #fef9ee;
+}
+.theme-charcoal {
+  --primary:        #4a4e63;
+  --primary-strong: #393c4d;
+  --primary-soft:   #e3e4e9;
+  --primary-tint:   #f3f3f5;
+}
+.theme-pink {
+  --primary:        #f99bbd;
+  --primary-strong: #c47894;
+  --primary-soft:   #feeaf1;
+  --primary-tint:   #fef6f9;
+}
+
+/* ===========================================================
+   Dark mode — add class .dark on <html> / <body>.
+   Surfaces are also overridden by the dark panel-color engine.
+   =========================================================== */
+.dark {
+  --ink-1: #f4ede1;
+  --ink-2: #b8b0a2;
+  --ink-3: #8a8275;
+  --ink-4: #6e6659;
+
+  --surface-0: #0d1117;
+  --surface-1: #141a23;
+  --surface-2: #1d2530;
+  --surface-3: #26303d;
+
+  --line:        rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.16);
+
+  --primary-soft: color-mix(in srgb, var(--primary) 22%, transparent);
+  --primary-tint: color-mix(in srgb, var(--primary) 12%, transparent);
+}

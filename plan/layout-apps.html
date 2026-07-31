@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ecommerce Data Hub — Layout Aplikasi</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --primary: #1f2937;
+    --primary-strong: #0f1729;
+    --primary-soft: #e5e7eb;
+    --primary-tint: #f3f4f6;
+    --primary-on: #ffffff;
+    --surface-1: #ffffff;
+    --surface-2: #f3f4f6;
+    --ink-1: #111827;
+    --ink-2: #4b5563;
+    --ink-3: #9ca3af;
+    --ink-4: #d1d5db;
+    --line: #e5e7eb;
+    --line-strong: #d1d5db;
+    --success: #10b981;
+    --success-soft: #d1fae5;
+    --warning: #f59e0b;
+    --warning-soft: #fef3c7;
+    --danger: #ef4444;
+    --danger-soft: #fee2e2;
+    --info: #3b82f6;
+    --info-soft: #dbeafe;
+    --r-2: 6px;
+    --r-3: 8px;
+    --r-4: 12px;
+    --r-5: 16px;
+    --r-pill: 999px;
+    --font-sans: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --fw-medium: 500;
+    --fw-bold: 600;
+    --fw-extra: 700;
+    --text-micro: 10.5px;
+    --text-caption: 11.5px;
+    --text-sm: 12.5px;
+    --text-body: 13.5px;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--font-sans);
+    color: var(--ink-1);
+    background: var(--surface-2);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .cover {
+    background: var(--primary);
+    color: white;
+    padding: 64px 40px;
+    text-align: center;
+  }
+  .cover h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.5px; }
+  .cover p { font-size: 16px; opacity: 0.8; margin-top: 8px; }
+  .cover .badge { display: inline-block; background: rgba(255,255,255,0.15); padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-top: 16px; }
+
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 24px 64px; }
+
+  h2 { font-size: 22px; font-weight: 700; margin: 40px 0 12px; padding-bottom: 6px; border-bottom: 2px solid var(--line); }
+  h3 { font-size: 16px; font-weight: 600; margin: 20px 0 8px; color: var(--primary); }
+  p, li { font-size: 14px; color: var(--ink-2); margin-bottom: 6px; }
+  ul, ol { padding-left: 18px; margin-bottom: 12px; }
+  li { margin-bottom: 3px; }
+  strong { color: var(--ink-1); font-weight: 600; }
+  code { font-family: var(--font-mono); font-size: 12px; background: var(--surface-2); padding: 1px 5px; border-radius: 3px; }
+
+  .toc { margin: 24px 0; padding: 20px; background: white; border: 1px solid var(--line); border-radius: var(--r-4); }
+  .toc h3 { margin-top: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-3); }
+  .toc a { color: var(--info); text-decoration: none; display: block; padding: 3px 0; font-size: 13.5px; }
+  .toc a:hover { text-decoration: underline; }
+
+  .demo-box {
+    background: var(--info-soft);
+    border: 1px solid var(--info);
+    border-radius: var(--r-4);
+    padding: 16px 20px;
+    margin: 20px 0;
+  }
+  .demo-box h3 { color: var(--info); margin-top: 0; }
+  .demo-box code { background: rgba(59,130,246,0.1); }
+  .demo-box a { color: var(--info); font-weight: 600; }
+
+  /* ===== UI Mockups ===== */
+  .mockup-container { margin: 20px 0; }
+
+  .ui-shell {
+    border: 1px solid var(--line);
+    border-radius: var(--r-5);
+    overflow: hidden;
+    background: var(--surface-1);
+    box-shadow: var(--shadow-md);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .ui-sidebar {
+    background: var(--surface-1);
+    border-right: 1px solid var(--line);
+    width: 220px;
+    display: inline-block;
+    vertical-align: top;
+    min-height: 400px;
+    padding: 0;
+  }
+
+  .ui-main {
+    display: inline-block;
+    vertical-align: top;
+    width: calc(100% - 225px);
+  }
+
+  .ui-topbar {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 48px;
+  }
+
+  .ui-content {
+    padding: 14px;
+  }
+
+  /* Sidebar mock */
+  .ui-side-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .ui-side-logo { width: 28px; height: 28px; border-radius: var(--r-3); background: var(--primary-soft); display: grid; place-items: center; font-size: 14px; color: var(--primary); }
+  .ui-side-user { margin: 8px 10px; padding: 7px 9px; background: var(--primary-tint); border: 1px solid var(--primary-soft); border-radius: var(--r-3); display: flex; align-items: center; gap: 8px; }
+  .ui-av { width: 26px; height: 26px; border-radius: 50%; background: var(--primary-soft); display: grid; place-items: center; font-weight: 700; font-size: 11px; color: var(--primary-strong); }
+  .ui-nav-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; margin: 1px 8px; border-radius: var(--r-3); color: var(--ink-2); font-size: 12px; }
+  .ui-nav-item.active { background: var(--primary-soft); color: var(--primary-strong); font-weight: 600; }
+  .ui-nav-item .chip { width: 20px; height: 20px; border-radius: 4px; background: var(--surface-2); display: grid; place-items: center; font-size: 12px; color: var(--ink-3); }
+  .ui-nav-item.active .chip { background: color-mix(in srgb, var(--primary) 18%, transparent); color: var(--primary-strong); }
+  .ui-nav-group { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--ink-4); padding: 8px 14px 4px; }
+
+  .ui-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-3); padding: 8px 10px; margin-bottom: 10px; }
+  .ui-pill { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); border-radius: var(--r-pill); padding: 4px 10px; font-size: 10px; color: var(--ink-2); background: var(--surface-1); }
+  .ui-pill.active { background: var(--primary-soft); color: var(--primary-strong); border-color: var(--primary); font-weight: 600; }
+  .ui-input { border: 1px solid var(--line); border-radius: var(--r-2); padding: 4px 8px; font-size: 11px; font-family: var(--font-mono); }
+  .ui-btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; font-size: 11px; font-weight: 600; border-radius: var(--r-2); background: var(--surface-1); border: 1px solid var(--line); color: var(--ink-1); }
+  .ui-btn-primary { background: var(--primary); border-color: transparent; color: var(--primary-on); }
+
+  .ui-kpis { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .ui-kpi { flex: 1; min-width: 130px; border: 1px solid var(--line); border-radius: var(--r-3); padding: 8px 10px; background: white; }
+  .ui-kpi .lbl { display: flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-3); }
+  .ui-kpi .val { font-family: var(--font-mono); font-size: 15px; font-weight: 600; margin-top: 2px; color: var(--ink-1); }
+
+  .ui-card { border: 1px solid var(--line); border-radius: var(--r-4); overflow: hidden; background: white; margin-bottom: 10px; }
+  .ui-card-head { padding: 10px 14px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+  .ui-card-note { font-weight: 400; font-size: 10px; color: var(--ink-3); }
+  .ui-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .ui-table th { text-align: left; font-weight: 600; color: var(--ink-2); padding: 6px 10px; background: var(--surface-2); white-space: nowrap; }
+  .ui-table td { padding: 7px 10px; border-top: 1px solid var(--line); white-space: nowrap; }
+  .ui-table td.n { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .ui-table tr:nth-child(even) td { background: var(--surface-2); }
+
+  .ui-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: var(--r-pill); }
+  .ui-badge-success { background: var(--success-soft); color: var(--success); }
+  .ui-badge-warning { background: var(--warning-soft); color: var(--warning); }
+  .ui-badge-danger { background: var(--danger-soft); color: var(--danger); }
+  .ui-badge-neutral { background: var(--surface-2); color: var(--ink-2); }
+  .ui-badge-info { background: var(--info-soft); color: var(--info); }
+
+  .ui-bars { padding: 10px 14px; }
+  .ui-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .ui-bar-track { flex: 1; height: 8px; background: var(--surface-2); border-radius: var(--r-pill); overflow: hidden; }
+  .ui-bar-fill { height: 100%; background: var(--primary); border-radius: var(--r-pill); }
+  .ui-bar-label { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); width: 50px; }
+  .ui-bar-val { font-family: var(--font-mono); font-size: 10px; width: 80px; text-align: right; }
+
+  .grid-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; }
+
+  /* Page cards */
+  .page-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+  @media (max-width: 600px) { .page-grid, .grid-2 { grid-template-columns: 1fr; } }
+  .page-card { border: 1px solid var(--line); border-radius: var(--r-4); padding: 14px; background: white; }
+  .page-card h4 { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .page-card p { font-size: 12px; color: var(--ink-2); }
+
+  .role-tag { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 10px; margin: 2px; }
+  .role-tag.admin { background: #e5e7eb; color: #374151; }
+  .role-tag.sales { background: #dbeafe; color: #1d4ed8; }
+  .role-tag.finance { background: #d1fae5; color: #065f46; }
+  .role-tag.warehouse { background: #fef3c7; color: #92400e; }
+
+  .note { background: #eff6ff; border-left: 4px solid var(--info); padding: 10px 14px; border-radius: 6px; margin: 12px 0; font-size: 13px; }
+  .note strong { color: var(--info); }
+
+  .footer { text-align: center; padding: 32px 24px; color: var(--ink-3); font-size: 12px; border-top: 1px solid var(--line); margin-top: 48px; }
+
+  .matrix { width: 100%; border-collapse: collapse; font-size: 12px; margin: 12px 0; }
+  .matrix th, .matrix td { padding: 6px 10px; border: 1px solid var(--line); text-align: center; }
+  .matrix th { background: var(--surface-2); font-weight: 600; }
+  .matrix .yes { color: var(--success); font-weight: 700; }
+  .matrix .no { color: var(--ink-4); }
+
+  .dual-panel { display: flex; gap: 12px; margin-top: 8px; }
+  .dual-panel > div { flex: 1; border: 1px solid var(--line); border-radius: var(--r-4); padding: 10px; background: white; }
+  .dual-panel h5 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>Ecommerce Data Hub</h1>
+  <p>Layout &amp; Navigasi Aplikasi — v0.1</p>
+  <span class="badge">Juli 2026</span>
+</div>
+
+<div class="container">
+
+<div class="toc">
+  <h3>Daftar Isi</h3>
+  <a href="#demo">→ Coba Langsung</a>
+  <a href="#overview">1. Gambaran Umum</a>
+  <a href="#login">2. Halaman Login</a>
+  <a href="#shell">3. Struktur Layout</a>
+  <a href="#ringkasan">4. Ringkasan Penjualan (Sales)</a>
+  <a href="#keuangan">5. Keuangan (Finance)</a>
+  <a href="#stok">6. Stok &amp; Produk (Gudang)</a>
+  <a href="#gudang">7. Daftar Kirim (Gudang)</a>
+  <a href="#sinkron">8. Status Sinkronisasi (Admin)</a>
+  <a href="#admin">9. Pengguna (Admin)</a>
+  <a href="#role">10. Hak Akses per Peran</a>
+</div>
+
+<!-- DEMO -->
+<div class="demo-box" id="demo">
+  <h3>🚀 Coba Langsung</h3>
+  <p>Aplikasi sudah bisa diakses di mode demo dengan data contoh.
+  Buka link di bawah, klik <strong>"Lewati login (data contoh)"</strong>,
+  ganti role via toolbar di atas.</p>
+  <p><a href="#">https://datahub-demo.vercel.app</a> ← (link akan diisi setelah deploy)</p>
+</div>
+
+<!-- ============== 1 ============== -->
+<h2 id="overview">1. Gambaran Umum</h2>
+<p>
+<strong>Ecommerce Data Hub</strong> adalah aplikasi dashboard internal web yang
+menampilkan data penjualan, keuangan, dan stok dari Shopee secara otomatis.
+Aplikasi bersifat <strong>read-only</strong> — tidak mengubah data di Shopee.
+</p>
+
+<div class="page-grid">
+  <div class="page-card">
+    <h4>📊 Sales</h4>
+    <p>Ringkasan penjualan, tren harian, produk terlaris.<br>
+    <span class="role-tag sales">Sales</span> <span class="role-tag finance">Finance</span> <span class="role-tag admin">Admin</span></p>
+  </div>
+  <div class="page-card">
+    <h4>💰 Finance</h4>
+    <p>Rincian biaya per order, payout released & pending, fee breakdown.<br>
+    <span class="role-tag finance">Finance</span> <span class="role-tag admin">Admin</span></p>
+  </div>
+  <div class="page-card">
+    <h4>📦 Warehouse</h4>
+    <p>Stok produk, daftar kirim, peringatan stok rendah. Tanpa nilai uang.<br>
+    <span class="role-tag sales">Sales</span> <span class="role-tag warehouse">Gudang</span> <span class="role-tag admin">Admin</span></p>
+  </div>
+  <div class="page-card">
+    <h4>⚙️ Admin</h4>
+    <p>Status sinkronisasi, token Shopee, kelola pengguna.<br>
+    <span class="role-tag admin">Admin</span></p>
+  </div>
+</div>
+
+<div class="note">
+  <strong>Catatan:</strong> Perkiraan pengguna &lt; 20 orang. Tidak ada akses dari luar organisasi.
+  Setiap pengguna hanya melihat data sesuai perannya.
+</div>
+
+<!-- ============== 2 ============== -->
+<h2 id="login">2. Halaman Login</h2>
+
+<p>Pintu masuk aplikasi. <strong>Email + password</strong> yang didaftarkan oleh Admin.</p>
+
+<div class="mockup-container">
+<div class="ui-shell" style="text-align:center; padding:40px 20px; max-width:400px; margin:0 auto;">
+  <div style="width:40px;height:40px;border-radius:10px;background:var(--primary-soft);color:var(--primary-strong);display:inline-flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:10px;">🔗</div>
+  <div style="font-size:17px;font-weight:700;">Ecommerce Data Hub</div>
+  <div style="font-size:12px;color:var(--ink-3);margin:4px 0 20px;">Masuk dengan akun yang telah didaftarkan admin.</div>
+
+  <div style="text-align:left;">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:3px;">Email</div>
+    <div style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--ink-3);text-align:left;margin-bottom:12px;">nama@perusahaan.com</div>
+
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:3px;">Password</div>
+    <div style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--ink-3);text-align:left;margin-bottom:20px;">••••••••</div>
+
+    <div style="background:var(--primary);color:white;text-align:center;padding:9px;border-radius:6px;font-size:12px;font-weight:600;">Masuk</div>
+  </div>
+</div>
+</div>
+
+<p><strong>States:</strong></p>
+<ul>
+  <li><strong>Loading:</strong> tombol disabled + spinner "Memproses…"</li>
+  <li><strong>Error:</strong> pesan merah "Email atau password salah."</li>
+  <li><strong>Success:</strong> redirect ke halaman sesuai peran</li>
+  <li><strong>Security:</strong> session HttpOnly cookie, 24 jam timeout</li>
+</ul>
+
+<!-- ============== 3 ============== -->
+<h2 id="shell">3. Struktur Layout</h2>
+
+<p>Setelah login, 3 area utama yang konsisten:</p>
+
+<div class="mockup-container">
+<div class="ui-shell">
+  <div style="display:flex;">
+    <div class="ui-sidebar">
+      <div class="ui-side-head">
+        <div class="ui-side-logo">🔗</div>
+        <div><div style="font-size:12px;font-weight:700;line-height:1.2;">Data Hub</div><div style="font-size:9px;color:var(--ink-4);">Shopee · Toko Nusantara</div></div>
+      </div>
+      <div class="ui-side-user">
+        <div class="ui-av">DL</div>
+        <div><div style="font-size:11px;font-weight:700;line-height:1.2;">Dewi Lestari</div><div style="font-size:9px;color:var(--ink-4);">Admin</div></div>
+      </div>
+      <div class="ui-nav-group">Operasional</div>
+      <div class="ui-nav-item active"><span class="chip">📊</span> Ringkasan</div>
+      <div class="ui-nav-item"><span class="chip">💰</span> Keuangan</div>
+      <div class="ui-nav-item"><span class="chip">📦</span> Stok</div>
+      <div class="ui-nav-item"><span class="chip">🚚</span> Daftar kirim</div>
+      <div class="ui-nav-group">Sistem</div>
+      <div class="ui-nav-item"><span class="chip">🔄</span> Status sinkronisasi</div>
+      <div class="ui-nav-item"><span class="chip">👥</span> Pengguna</div>
+      <div style="border-top:1px solid var(--line);padding:6px 14px;font-size:9px;color:var(--ink-4);display:flex;justify-content:space-between;">
+        <span>Data Hub © 2026</span>
+        <span>v0.1</span>
+      </div>
+    </div>
+    <div class="ui-main">
+      <div class="ui-topbar">
+        <div><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--ink-4);">Penjualan</div><div style="font-size:14px;font-weight:700;">Ringkasan</div></div>
+        <div style="margin-left:auto;display:flex;gap:6px;">
+          <div class="ui-pill" style="font-size:10px;"><span style="color:var(--success);">●</span> Sinkron 3 menit lalu</div>
+          <div class="ui-btn">📥 Export CSV</div>
+        </div>
+      </div>
+      <div class="ui-content">
+        <div class="ui-toolbar">
+          <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--ink-4);">Periode</span>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <span style="font-size:9px;color:var(--ink-4);">Dari</span>
+            <span class="ui-input" style="width:80px;">2026-06-28</span>
+            <span style="font-size:12px;color:var(--ink-4);">→</span>
+            <span style="font-size:9px;color:var(--ink-4);">Sampai</span>
+            <span class="ui-input" style="width:80px;">2026-07-28</span>
+          </div>
+          <span class="ui-pill active">30 hari</span>
+          <span class="ui-pill">7 hari</span>
+          <span class="ui-pill">Bulan ini</span>
+        </div>
+        <div class="ui-kpis">
+          <div class="ui-kpi"><div class="lbl">💰 Bruto penjualan</div><div class="val">Rp 78,6 jt</div><div style="font-size:9px;color:var(--success);">↑ 12%</div></div>
+          <div class="ui-kpi"><div class="lbl">📋 Jumlah order</div><div class="val">606</div><div style="font-size:9px;color:var(--success);">↑ 8%</div></div>
+          <div class="ui-kpi"><div class="lbl">🛒 Rata-rata nilai</div><div class="val">Rp 129,7 rb</div><div style="font-size:9px;color:var(--ink-4);">→ 0%</div></div>
+          <div class="ui-kpi"><div class="lbl">📦 Item terjual</div><div class="val">1.247</div><div style="font-size:9px;color:var(--success);">↑ 15%</div></div>
+        </div>
+        <div class="grid-2">
+          <div class="ui-card">
+            <div class="ui-card-head">Tren penjualan harian <span class="ui-card-note">Bruto per hari (WIB)</span></div>
+            <div class="ui-bars">
+              <div class="ui-bar-row"><span class="ui-bar-label">28 Jul</span><div class="ui-bar-track"><div class="ui-bar-fill" style="width:85%"></div></div><span class="ui-bar-val">Rp 3,2 jt</span></div>
+              <div class="ui-bar-row"><span class="ui-bar-label">27 Jul</span><div class="ui-bar-track"><div class="ui-bar-fill" style="width:60%"></div></div><span class="ui-bar-val">Rp 2,1 jt</span></div>
+              <div class="ui-bar-row"><span class="ui-bar-label">26 Jul</span><div class="ui-bar-track"><div class="ui-bar-fill" style="width:45%"></div></div><span class="ui-bar-val">Rp 1,8 jt</span></div>
+              <div class="ui-bar-row"><span class="ui-bar-label">25 Jul</span><div class="ui-bar-track"><div class="ui-bar-fill" style="width:70%"></div></div><span class="ui-bar-val">Rp 2,7 jt</span></div>
+              <div class="ui-bar-row"><span class="ui-bar-label">24 Jul</span><div class="ui-bar-track"><div class="ui-bar-fill" style="width:90%"></div></div><span class="ui-bar-val">Rp 3,5 jt</span></div>
+            </div>
+          </div>
+          <div class="ui-card">
+            <div class="ui-card-head">Produk terlaris <span class="ui-card-note">Berdasarkan qty</span></div>
+            <table class="ui-table">
+              <thead><tr><th>SKU</th><th>Produk</th><th class="n">Qty</th><th class="n">Nilai</th></tr></thead>
+              <tbody>
+                <tr><td style="font-family:var(--font-mono);">KLP-L</td><td>Kemeja Linen Putih · L</td><td class="n">184</td><td class="n">Rp 27,6 jt</td></tr>
+                <tr><td style="font-family:var(--font-mono);">CCK-32</td><td>Celana Chino Krem · 32</td><td class="n">98</td><td class="n">Rp 19,6 jt</td></tr>
+                <tr><td style="font-family:var(--font-mono);">KPH-M</td><td>Kaos Polos Hitam · M</td><td class="n">156</td><td class="n">Rp 11,7 jt</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--ink-3);margin-top:6px;">
+          ℹ️ Bruto dari tabel order. Payout bersih hanya di halaman Keuangan.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="note">
+  <strong>Sticky Sidebar:</strong> navigasi selalu terlihat. Menu di luar wewenang tidak dirender.
+  <strong>Data Freshness:</strong> setiap halaman menampilkan "Sinkron X menit lalu".
+</div>
+
+<!-- ============== 4 ============== -->
+<h2 id="ringkasan">4. Ringkasan Penjualan (Sales)</h2>
+
+<div class="page-grid">
+  <div class="page-card"><h4>📊 4 KPI Cards</h4><p>Bruto penjualan, jumlah order, rata-rata nilai order, item terjual. Masing-masing dengan <strong>delta %</strong> vs periode sebelumnya.</p></div>
+  <div class="page-card"><h4>📈 Tren Harian Chart</h4><p>Bar chart (Recharts) — bruto per tanggal WIB. Tooltip interaktif format IDR.</p></div>
+  <div class="page-card"><h4>🏆 Produk Terlaris</h4><p>Tabel top produk berdasarkan qty terjual. Pagination server-side.</p></div>
+  <div class="page-card"><h4>📅 Date Range Picker</h4><p>Filter periode. Preset: 7 hari, 30 hari, bulan ini, bulan lalu. Input manual.</p></div>
+</div>
+
+<p><strong>Struktur halaman:</strong></p>
+<ul>
+  <li>Toolbar → KPI cards → 2 column grid (chart + tabel) → info note</li>
+  <li><strong>Role warehous</strong> tetap bisa lihat tapi kolom uang diganti "—"</li>
+  <li>Data dummy: bruto Rp 78,6 jt, 606 order, 1.247 item terjual</li>
+</ul>
+
+<!-- ============== 5 ============== -->
+<h2 id="keuangan">5. Keuangan (Finance)</h2>
+
+<div class="page-grid">
+  <div class="page-card"><h4>💰 Dual Panel: Released & Pending</h4><p>Panel terpisah tegas — <strong>tidak pernah dijumlahkan</strong>. Dana released = sudah cair, pending = belum.</p></div>
+  <div class="page-card"><h4>📋 Rincian Per Order</h4><p>Bruto, komisi, biaya layanan, admin, voucher penjual, refund, payout bersih. Pagination.</p></div>
+  <div class="page-card"><h4>🔍 Filter & Basis Tanggal</h4><p>Search order number. Toggle filter berdasarkan tanggal order atau tanggal payout.</p></div>
+  <div class="page-card"><h4>📊 Fee Breakdown</h4><p>Ringkasan komponen biaya — nominal + persentase terhadap bruto. Alert jika <code>other_fee</code> membesar.</p></div>
+</div>
+
+<div class="dual-panel">
+  <div>
+    <h5>✅ Released (1089)</h5>
+    <div style="font-size:12px;line-height:1.8;">
+      <div><span style="color:var(--ink-3);">Bruto:</span> <strong>Rp 412,5 jt</strong></div>
+      <div><span style="color:var(--ink-3);">Total fee:</span> <strong>Rp 56,2 jt</strong></div>
+      <div><span style="color:var(--ink-3);">Net payout:</span> <strong style="color:var(--success);">Rp 356,3 jt</strong></div>
+    </div>
+  </div>
+  <div>
+    <h5>⏳ Pending (158)</h5>
+    <div style="font-size:12px;line-height:1.8;">
+      <div><span style="color:var(--ink-3);">Bruto:</span> <strong>Rp 45,1 jt</strong></div>
+      <div><span style="color:var(--ink-3);">Total fee:</span> <strong style="color:var(--ink-4);">—</strong></div>
+      <div><span style="color:var(--ink-3);">Net payout:</span> <strong style="color:var(--ink-4);">—</strong></div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <strong>Aturan penting:</strong>
+  <ul style="margin-top:6px;">
+    <li>Pendapatan bersih <strong>hanya dari tabel settlement</strong> — tidak pernah dari order</li>
+    <li>Pending order: fee fields = <strong>null</strong> (bukan Rp 0), render sebagai "—"</li>
+    <li>Identity: <code>gross − all fees − refund = net_payout</code> — alert jika tidak balance</li>
+  </ul>
+</div>
+
+<!-- ============== 6 ============== -->
+<h2 id="stok">6. Stok &amp; Produk</h2>
+
+<div class="page-grid">
+  <div class="page-card"><h4>📊 KPI</h4><p>Total SKU aktif, SKU stok rendah, SKU habis. Label jenis stok (mis. "Stok tersedia").</p></div>
+  <div class="page-card"><h4>📋 Tabel Produk</h4><p>SKU, nama, harga, stok, ambang, kondisi — dengan pagination server-side.</p></div>
+  <div class="page-card"><h4>⚠️ Condition Badges</h4><p><span class="ui-badge ui-badge-success">✅ Aman</span> stok normal. <span class="ui-badge ui-badge-warning">⚠️ Perlu restock</span> di bawah ambang. <span class="ui-badge ui-badge-danger">🚫 Habis</span> stok 0.</p></div>
+  <div class="page-card"><h4>🚫 Role Gudang</h4><p>Untuk role warehouse, kolom <strong>harga tidak dikirim server</strong>. Bukan disembunyikan CSS.</p></div>
+</div>
+
+<table class="matrix" style="max-width:600px;margin:12px auto;">
+  <tr><th>Kondisi</th><th>Warna</th><th>Ikon</th><th>Kriteria</th></tr>
+  <tr><td>Aman</td><td style="color:var(--success);">Hijau</td><td>✅ check_circle</td><td>Stok &ge; threshold</td></tr>
+  <tr><td>Perlu restock</td><td style="color:var(--warning);">Kuning</td><td>⚠️ warning</td><td>Stok &lt; threshold</td></tr>
+  <tr><td>Habis</td><td style="color:var(--danger);">Merah</td><td>🚫 do_not_disturb</td><td>Stok = 0</td></tr>
+</table>
+
+<!-- ============== 7 ============== -->
+<h2 id="gudang">7. Daftar Kirim (Gudang)</h2>
+
+<div class="page-grid">
+  <div class="page-card"><h4>📦 Card-Based</h4><p>Setiap order sebagai kartu: nomor order, tenggat kirim, daftar item (SKU, nama, qty).</p></div>
+  <div class="page-card"><h4>⏰ Urgensi</h4><p><span class="ui-badge ui-badge-warning">⚠️ Kirim hari ini</span> untuk order lama. <span class="ui-badge ui-badge-neutral">📅 Terjadwal</span> untuk yang masih longgar.</p></div>
+</div>
+
+<p><strong>Role Gudang hanya lihat SKU + qty. Tidak ada harga, komisi, atau payout.</strong></p>
+
+<div class="mockup-container" style="max-width:500px;">
+<div class="ui-card">
+  <div style="padding:10px 14px;display:flex;align-items:center;gap:8px;">
+    <span style="font-family:var(--font-mono);font-weight:600;">#260727ABC123</span>
+    <span class="ui-badge ui-badge-warning">⏰ Kirim hari ini</span>
+  </div>
+  <div style="border-top:1px solid var(--line);padding:8px 14px;font-size:11px;">
+    <div><span style="font-family:var(--font-mono);">KLP-L</span> Kemeja Linen Putih · L <span style="float:right;font-weight:600;">×1</span></div>
+    <div style="margin-top:4px;"><span style="font-family:var(--font-mono);">KPH-M</span> Kaos Polos Hitam · M <span style="float:right;font-weight:600;">×2</span></div>
+  </div>
+</div>
+<div class="ui-card" style="margin-top:6px;">
+  <div style="padding:10px 14px;display:flex;align-items:center;gap:8px;">
+    <span style="font-family:var(--font-mono);font-weight:600;">#260727ABC090</span>
+    <span class="ui-badge ui-badge-neutral">📅 Terjadwal</span>
+  </div>
+  <div style="border-top:1px solid var(--line);padding:8px 14px;font-size:11px;">
+    <div><span style="font-family:var(--font-mono);">TBK-01</span> Tote Bag Kanvas <span style="float:right;font-weight:600;">×2</span></div>
+    <div style="margin-top:4px;"><span style="font-family:var(--font-mono);">KLP-M</span> Kemeja Linen Putih · M <span style="float:right;font-weight:600;">×1</span></div>
+  </div>
+</div>
+</div>
+
+<!-- ============== 8 ============== -->
+<h2 id="sinkron">8. Status Sinkronisasi (Admin)</h2>
+
+<div class="page-grid">
+  <div class="page-card"><h4>🔑 Otorisasi Token</h4><p>Info partner_id, masa berlaku access & refresh token. Tombol "Otorisasi ulang toko".</p></div>
+  <div class="page-card"><h4>🔄 Job Sinkronisasi</h4><p>Tabel: data, terakhir sukses, status (Normal/Gagal n×), tombol sync manual.</p></div>
+  <div class="page-card"><h4>✅ Rekonsiliasi</h4><p>7 hari terakhir. <span class="ui-badge ui-badge-success">Cocok</span> vs <span class="ui-badge ui-badge-danger">Selisih</span> + tombol proses ulang.</p></div>
+  <div class="page-card"><h4>📊 Statistik API</h4><p>Panggilan API 24 jam, kedalaman antrean, job gagal.</p></div>
+</div>
+
+<table class="matrix" style="max-width:600px;margin:12px auto;">
+  <tr><th>Job</th><th>Jadwal</th><th>Cakupan</th></tr>
+  <tr><td>Order sync</td><td>Tiap 15 menit</td><td>Order 7 hari terakhir</td></tr>
+  <tr><td>Order daily</td><td>01:00 WIB</td><td>30 hari terakhir</td></tr>
+  <tr><td>Settlement</td><td>02:00 WIB</td><td>Order selesai belum release</td></tr>
+  <tr><td>Product</td><td>Tiap 6 jam</td><td>Semua produk & varian</td></tr>
+  <tr><td>Stock snapshot</td><td>23:50 WIB</td><td>Semua SKU</td></tr>
+  <tr><td>Reconciliation</td><td>03:00 WIB</td><td>7 hari terakhir</td></tr>
+</table>
+
+<p>Pesan error ditampilkan <strong>apa adanya</strong> — admin perlu teks persis untuk melapor ke Shopee.</p>
+
+<!-- ============== 9 ============== -->
+<h2 id="admin">9. Pengguna (Admin)</h2>
+
+<div class="page-grid">
+  <div class="page-card"><h4>👥 Daftar Pengguna</h4><p>Tabel: nama, email, <span class="ui-badge ui-badge-info">Sales</span> <span class="ui-badge ui-badge-success">Finance</span> <span class="ui-badge ui-badge-warning">Gudang</span> <span class="ui-badge ui-badge-neutral">Admin</span>, status aktif/nonaktif, tanggal dibuat.</p></div>
+  <div class="page-card"><h4>➕ Tambah/Edit</h4><p>Modal form: nama, email, password (opsional saat edit), pilih peran.</p></div>
+  <div class="page-card"><h4>🚫 Nonaktifkan</h4><p>Konfirmasi dialog. Pengguna nonaktif tidak bisa login. Bisa diaktifkan kembali.</p></div>
+  <div class="page-card"><h4>🔒 Admin Only</h4><p>Menu "Pengguna" hanya muncul di sidebar jika role = admin.</p></div>
+</div>
+
+<div class="note">
+  <strong>Akses:</strong> Admin only. Menu tidak dirender untuk role lain.
+</div>
+
+<!-- ============== 10 ============== -->
+<h2 id="role">10. Hak Akses per Peran</h2>
+
+<table class="matrix">
+  <tr><th>Halaman</th><th><span class="role-tag sales">Sales</span></th><th><span class="role-tag finance">Finance</span></th><th><span class="role-tag warehouse">Gudang</span></th><th><span class="role-tag admin">Admin</span></th></tr>
+  <tr><td style="text-align:left;">Ringkasan Penjualan</td><td class="yes">✅</td><td class="yes">✅</td><td class="no">—</td><td class="yes">✅</td></tr>
+  <tr><td style="text-align:left;">Keuangan</td><td class="no">—</td><td class="yes">✅</td><td class="no">—</td><td class="yes">✅</td></tr>
+  <tr><td style="text-align:left;">Stok &amp; Produk</td><td class="yes">✅</td><td class="no">—</td><td class="yes">✅</td><td class="yes">✅</td></tr>
+  <tr><td style="text-align:left;">Daftar Kirim</td><td class="no">—</td><td class="no">—</td><td class="yes">✅</td><td class="yes">✅</td></tr>
+  <tr><td style="text-align:left;">Status Sinkronisasi</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✅</td></tr>
+  <tr><td style="text-align:left;">Pengguna (CRUD)</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✅</td></tr>
+</table>
+
+<h3>Filter Kolom Server-side</h3>
+<p>
+<strong>Gudang</strong> tidak hanya dibatasi halamannya — kolom nilai uang <strong>tidak dikirim server</strong>.
+Data tidak sampai ke browser:
+</p>
+<table class="matrix" style="max-width:500px;">
+  <tr><th>Kolom</th><th>Sales/Finance/Admin</th><th>Gudang</th></tr>
+  <tr><td>price, gross, commission_fee</td><td class="yes">✅ Ada</td><td class="no">❌ Dihapus</td></tr>
+  <tr><td>service_fee, admin_fee</td><td class="yes">✅ Ada</td><td class="no">❌ Dihapus</td></tr>
+  <tr><td>seller_voucher, refund_amount</td><td class="yes">✅ Ada</td><td class="no">❌ Dihapus</td></tr>
+  <tr><td>net_payout</td><td class="yes">✅ Ada</td><td class="no">❌ Dihapus</td></tr>
+  <tr><td>sku, name, stock, qty</td><td class="yes">✅ Ada</td><td class="yes">✅ Ada</td></tr>
+</table>
+
+<h3>Fitur Lintas Halaman</h3>
+<div class="page-grid">
+  <div class="page-card"><h4>📅 Date Range Picker</h4><p>Input manual + preset. Ada di semua halaman laporan.</p></div>
+  <div class="page-card"><h4>📄 Pagination</h4><p>Server-side. Pilih 10/25/50/100 baris. Navigasi halaman.</p></div>
+  <div class="page-card"><h4>📊 Chart Recharts</h4><p>Bar chart interaktif. Tooltip format IDR. Skeleton loading.</p></div>
+  <div class="page-card"><h4>🚦 States Lengkap</h4><p>Loading skeleton, error with retry, empty state dengan pesan.</p></div>
+  <div class="page-card"><h4>🔒 Server-side RBAC</h4><p>Menu, kolom, data — semua difilter di server. Frontend cuma render.</p></div>
+  <div class="page-card"><h4>✅ Freshness Indicator</h4><p>"Sinkron N menit lalu" setiap halaman. Kuning jika basi.</p></div>
+</div>
+
+</div>
+
+<div class="footer">
+  Ecommerce Data Hub — Layout Aplikasi v0.1<br>
+  Dokumen untuk klien sebagai gambaran antarmuka aplikasi.<br>
+  Dibuat: Juli 2026
+</div>
+
+</body>
+</html>
