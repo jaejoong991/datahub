@@ -1,4 +1,4 @@
-import Fastify from 'fastify';
+import Fastify, { type FastifyInstance } from 'fastify';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
@@ -17,15 +17,11 @@ import { adminRoutes } from './web/routes/admin.js';
 import { adminPlanRoutes } from './web/routes/admin-plans.js';
 import { adminRoleRoutes } from './web/routes/admin-roles.js';
 
-async function main() {
+/* Seam untuk testing: bangun instance Fastify lengkap (plugin + semua route)
+   TANPA listen() dan TANPA migrasi/seed. Dipakai main() di bawah maupun test
+   lewat app.inject() — jadi test tidak perlu bind port. */
+export async function buildApp(): Promise<FastifyInstance> {
   const env = getEnv();
-
-  await runMigrations();
-  if (env.NODE_ENV === 'development') {
-    await runSeed();
-  } else {
-    logInfo(`Seed dilewati — NODE_ENV=${env.NODE_ENV} (hanya jalan otomatis di development)`);
-  }
 
   const app = Fastify({ logger: false });
   await app.register(cors, { origin: env.CORS_ORIGIN, credentials: true });
@@ -43,6 +39,21 @@ async function main() {
   await adminRoleRoutes(app);
 
   app.get('/health', async () => ({ status: 'ok', time: new Date().toISOString() }));
+
+  return app;
+}
+
+async function main() {
+  const env = getEnv();
+
+  await runMigrations();
+  if (env.NODE_ENV === 'development') {
+    await runSeed();
+  } else {
+    logInfo(`Seed dilewati — NODE_ENV=${env.NODE_ENV} (hanya jalan otomatis di development)`);
+  }
+
+  const app = await buildApp();
 
   try {
     await app.listen({ port: env.PORT, host: '0.0.0.0' });
@@ -62,4 +73,10 @@ async function main() {
   process.on('SIGINT', shutdown);
 }
 
-main();
+// Auto-execute hanya saat file ini dijalankan langsung (npm run dev / node dist/index.js),
+// bukan saat di-import — buildApp() diimpor test lewat app.inject() dan tidak boleh
+// ikut memicu migrasi/seed/listen.
+const mainUrl = process.argv[1];
+if (mainUrl && (mainUrl.endsWith('/index.ts') || mainUrl.endsWith('\\index.ts') || mainUrl.endsWith('/index.js') || mainUrl.endsWith('\\index.js'))) {
+  main();
+}
