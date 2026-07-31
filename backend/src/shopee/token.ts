@@ -1,4 +1,4 @@
-import { getShopeeSDK } from './client.js';
+import { getShopeeSDK, clearShopTokenStore } from './client.js';
 import { logInfo } from '../lib/logger.js';
 
 export const getAuthorizationUrl = (shopId: number, redirectUri: string, state?: string) =>
@@ -22,7 +22,6 @@ export async function getValidToken(shopId: number): Promise<string> {
    (routes/auth.ts) supaya /authorize dan /reauthorize lewat jalur yang sama —
    kalau tidak, callback menolak flow ini karena state-nya tidak pernah di-set. */
 export async function clearShopTokens(shopId: number): Promise<void> {
-  const sdk = await getShopeeSDK(shopId);
-  await (sdk as any).tokenStorage?.clear();
+  await clearShopTokenStore(shopId);
   logInfo(`Shopee tokens cleared for shop ${shopId}`);
 }

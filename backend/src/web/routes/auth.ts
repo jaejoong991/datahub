@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { getDb } from '../../lib/db.js';
 import { verifyPassword } from '../../lib/crypto.js';
 import { createSession, deleteSession, setActiveShop } from '../../lib/session.js';
-import { authPreHandler } from '../../lib/auth.js';
+import { authPreHandler, resolveActiveShopId } from '../../lib/auth.js';
 import { requireRole } from '../../lib/rbac.js';
 import { getEnv } from '../../lib/env.js';
 import { getAuthorizationUrl, exchangeCodeForTokens, clearShopTokens } from '../../shopee/token.js';
@@ -58,7 +58,7 @@ export async function authRoutes(app: FastifyInstance) {
     });
     await getDb().insertInto('activity_log').values({
       user_id: user.id, action: 'login', detail: null, ip: req.ip,
-    } as any).execute();
+    }).execute();
     return { success: true };
   });
 
@@ -76,7 +76,18 @@ export async function authRoutes(app: FastifyInstance) {
       .orderBy('id', 'asc')
       .execute();
 
-    const activeShopId = req.shopId ?? shops[0]?.id ?? null;
+    /* Kalau sesi belum punya toko aktif (mis. sesi terbit saat belum ada shop,
+       lalu shop-nya ditambahkan belakangan), PILIH dan SIMPAN — jangan cuma
+       dilaporkan. Sebelumnya /me melaporkan shops[0] tanpa menyimpannya, jadi
+       UI menampilkan toko aktif sementara sesi tetap null dan semua route data
+       balas 400 no_active_shop. Laporan dan kenyataan harus sama. */
+    let activeShopId = req.shopId ?? null;
+    if (activeShopId === null && shops[0]) {
+      const sid = req.cookies?.session_id;
+      if (sid) await setActiveShop(sid, shops[0].id);
+      activeShopId = shops[0].id;
+      req.shopId = activeShopId;
+    }
 
     // Ambil features per shop dari subscription
     const subs = await getDb().selectFrom('shop_subscription')
@@ -113,8 +124,8 @@ export async function authRoutes(app: FastifyInstance) {
   });
 
   /* Switch active shop */
-  app.post('/me/shop', { preHandler: [authPreHandler] }, async (req, reply) => {
-    const { shop_id } = (req.body as any) ?? {};
+  app.post<{ Body: { shop_id?: number | string } }>('/me/shop', { preHandler: [authPreHandler] }, async (req, reply) => {
+    const { shop_id } = req.body ?? {};
     if (!shop_id) return reply.status(422).send({ message: 'shop_id wajib.' });
 
     const shop = await getDb().selectFrom('shop')
@@ -132,7 +143,9 @@ export async function authRoutes(app: FastifyInstance) {
 
   /* Admin masuk ke halaman ini → redirect ke Shopee OAuth. */
   app.get('/auth/shopee/authorize', { preHandler: [authPreHandler, requireRole(['admin'])] }, async (req, reply) => {
-    const url = await beginShopeeAuth(reply, req.shopId ?? 1);
+    const shopId = resolveActiveShopId(req, reply);
+    if (shopId === null) return;
+    const url = await beginShopeeAuth(reply, shopId);
     logInfo(`Shopee authorize redirect`, { url });
     return reply.redirect(url);
   });
@@ -172,14 +185,17 @@ export async function authRoutes(app: FastifyInstance) {
       await exchangeCodeForTokens(shopId, code);
       return reply.redirect(`${env.CORS_ORIGIN}/sinkron`); // Redirect ke halaman status di frontend
     } catch (err) {
+      // Detail asli cuma di-log server-side — TIDAK dikirim ke client (dulu
+      // (err as Error).message ikut dibalikin di body, bocorin internal shopee/token.ts).
       logInfo('Shopee auth callback failed', { error: (err as Error).message });
-      return reply.status(500).send({ message: 'Otorisasi Shopee gagal.', error: (err as Error).message });
+      return reply.status(500).send({ message: 'Otorisasi Shopee gagal.', code: 'shopee_auth_failed' });
     }
   });
 
   /* Force re-authorize — hapus token, redirect ke authorize. */
   app.post('/auth/shopee/reauthorize', { preHandler: [authPreHandler, requireRole(['admin'])] }, async (req, reply) => {
-    const shopId = req.shopId ?? 1;
+    const shopId = resolveActiveShopId(req, reply);
+    if (shopId === null) return;
     await clearShopTokens(shopId);
     const url = await beginShopeeAuth(reply, shopId);
     return { url };

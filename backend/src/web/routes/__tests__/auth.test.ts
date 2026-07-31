@@ -139,6 +139,33 @@ describe('auth routes', () => {
     expect(leftover).toBeUndefined();
   });
 
+  /* Regresi: /me dulu melaporkan shops[0] sebagai active_shop_id tanpa
+     menyimpannya ke sesi. Setelah shopId jadi fail-closed, itu bikin UI
+     menampilkan toko aktif sementara semua route data balas 400. */
+  it('/me menyembuhkan sesi tanpa toko aktif — memilih shop pertama dan menyimpannya', async () => {
+    await seedTestUsers();
+    const cookie = await loginAs(app, 'admin');
+    const sessionId = cookie.replace('session_id=', '');
+
+    // Sesi lama yang terbit saat belum ada shop aktif.
+    await getDb().updateTable('user_session')
+      .set({ shop_id: null }).where('id', '=', sessionId).execute();
+
+    const me = await app.inject({ method: 'GET', url: '/me', headers: { cookie } });
+    expect(me.statusCode).toBe(200);
+    const reported = me.json().active_shop_id;
+    expect(reported).not.toBeNull();
+
+    // Yang dilaporkan harus benar-benar tersimpan, bukan cuma ditampilkan.
+    const sess = await getDb().selectFrom('user_session')
+      .select('shop_id').where('id', '=', sessionId).executeTakeFirst();
+    expect(sess?.shop_id).toBe(reported);
+
+    // Dan route data ikut jalan, bukan 400 no_active_shop.
+    const data = await app.inject({ method: 'GET', url: '/sales/summary', headers: { cookie } });
+    expect(data.statusCode).toBe(200);
+  });
+
   it('POST /me/shop pindah active shop', async () => {
     const { shopId } = await seedTestUsers();
     const cookie = await loginAs(app, 'admin');
@@ -151,7 +178,7 @@ describe('auth routes', () => {
         name: 'Test Shop 2',
         is_active: true,
         authorized_at: new Date(),
-      } as any)
+      })
       .returning('id')
       .executeTakeFirstOrThrow();
     expect(secondShop.id).not.toBe(shopId);

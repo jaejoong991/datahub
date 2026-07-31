@@ -154,7 +154,7 @@ describe('filterColumnsForRole / filterRowsForRole — kolom uang tidak boleh sa
       price: '15000',
       stock: 5,
       low_stock_threshold: 2,
-    } as any).execute();
+    }).execute();
   });
 
   afterAll(async () => {

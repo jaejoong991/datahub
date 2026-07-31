@@ -37,17 +37,17 @@ export async function runSeed() {
     { email: 'dimas@toko.id', password_hash: pw, full_name: 'Dimas Prakoso', role: 'sales', is_active: true },
     { email: 'agus@toko.id', password_hash: pw, full_name: 'Agus Wijaya', role: 'warehouse', is_active: true },
     { email: 'sari@toko.id', password_hash: pw, full_name: 'Sari Utami', role: 'finance', is_active: false },
-  ] as any).execute();
+  ]).execute();
 
   // Shop 1: Shopee
   await db.insertInto('shop').values({
     channel: 'shopee', external_shop_id: 'shop-001', name: 'Toko Nusantara', is_active: true, authorized_at: new Date('2026-06-01'),
-  } as any).execute();
+  }).execute();
 
   // Shop 2: Tokopedia (dummy — credential kosong, untuk demo multi-channel)
   await db.insertInto('shop').values({
     channel: 'tokopedia', external_shop_id: 'tp-001', name: 'Toko Nusantara — Tokped', is_active: true,
-  } as any).execute();
+  }).execute();
 
   for (const resource of ['order', 'settlement', 'product', 'stock_snapshot']) {
     await db.insertInto('sync_state').values({
@@ -66,7 +66,7 @@ export async function runSeed() {
       { shop_id: 1, key: 'partner_id', value: partnerId, is_encrypted: false },
       { shop_id: 1, key: 'partner_key', value: encKey, is_encrypted: true },
       { shop_id: 1, key: 'sandbox', value: sandbox ? 'true' : 'false', is_encrypted: false },
-    ] as any).execute();
+    ]).execute();
     logInfo('Seed: shopee credentials from env → DB');
   }
 
@@ -77,13 +77,13 @@ export async function runSeed() {
   if (planMap.Full) {
     await db.insertInto('shop_subscription').values({
       shop_id: 1, plan_id: planMap.Full, active_since: new Date('2026-06-01'),
-    } as any).execute();
+    }).execute();
   }
   if (planMap['Data Viewer'] && planMap.Full) {
     // Shop 2 trial — Data Viewer plan dulu
     await db.insertInto('shop_subscription').values({
       shop_id: 2, plan_id: planMap['Data Viewer'], active_since: new Date(), is_trial: true,
-    } as any).execute();
+    }).execute();
     logInfo('Seed: shop 2 = Data Viewer, shop 1 = Full');
   }
 
