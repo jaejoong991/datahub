@@ -15,7 +15,7 @@ export async function createSession(userId: number, shopId?: number): Promise<st
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
   await getDb().insertInto('user_session').values({
     id, user_id: userId, shop_id: shopId ?? null, expires_at: expiresAt,
-  } as any).execute();
+  }).execute();
   return id;
 }
 

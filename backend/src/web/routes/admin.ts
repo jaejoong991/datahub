@@ -37,13 +37,13 @@ export async function adminRoutes(app: FastifyInstance) {
     const passwordHash = await hashPassword(password);
     const user = await getDb().insertInto('app_user').values({
       email, password_hash: passwordHash, full_name: name, role, is_active: true,
-    } as any).returning(['id', 'email', 'full_name as name', 'role', 'is_active', 'created_at'])
+    }).returning(['id', 'email', 'full_name as name', 'role', 'is_active', 'created_at'])
       .executeTakeFirstOrThrow();
     return user;
   });
 
-  app.put('/admin/users/:id', { preHandler: [authPreHandler, requireRole(['admin'])] }, async (req, reply) => {
-    const { id } = (req.params as any);
+  app.put<{ Params: { id: string } }>('/admin/users/:id', { preHandler: [authPreHandler, requireRole(['admin'])] }, async (req, reply) => {
+    const { id } = req.params;
     const parsed = updateSchema.safeParse(req.body);
     if (!parsed.success) return reply.status(422).send({ message: 'Data tidak valid.' });
     const { name, email, password, role } = parsed.data;
@@ -63,11 +63,11 @@ export async function adminRoutes(app: FastifyInstance) {
       .executeTakeFirstOrThrow();
   });
 
-  app.post('/admin/users/:id/toggle', { preHandler: [authPreHandler, requireRole(['admin'])] }, async (req) => {
-    const { id } = (req.params as any);
+  app.post<{ Params: { id: string } }>('/admin/users/:id/toggle', { preHandler: [authPreHandler, requireRole(['admin'])] }, async (req, reply) => {
+    const { id } = req.params;
     const user = await getDb().selectFrom('app_user').select('is_active')
       .where('id', '=', Number(id)).executeTakeFirst();
-    if (!user) throw new Error('User tidak ditemukan.');
+    if (!user) return reply.status(404).send({ message: 'User tidak ditemukan.', code: 'not_found' });
     return getDb().updateTable('app_user').set({ is_active: !user.is_active })
       .where('id', '=', Number(id))
       .returning(['id', 'email', 'full_name as name', 'role', 'is_active', 'created_at'])

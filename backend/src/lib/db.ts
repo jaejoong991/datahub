@@ -1,5 +1,5 @@
 import pg from 'pg';
-import { Kysely, PostgresDialect } from 'kysely';
+import { Kysely, PostgresDialect, type Generated, type ColumnType } from 'kysely';
 import { getEnv } from './env.js';
 
 /* node-postgres mengembalikan bigint (OID 20) sebagai string, padahal tipe
@@ -35,8 +35,16 @@ pg.types.setTypeParser(pg.types.builtins.DATE, (value: string) => value);
    Add new tables/columns here when adding migrations.
    ============================================================ */
 
+/* Kolom `date` yang di beberapa call site diisi objek JS Date langsung
+   (bukan string 'yyyy-MM-dd') — driver pg tetap menerimanya (di-serialize lalu
+   di-cast Postgres ke date), tapi hasil SELECT selalu string mentah karena
+   parser DATE custom di atas. Insert/update boleh terima keduanya; Select
+   tetap string supaya konsisten dengan kolom date lain & kontrak frontend. */
+type FlexDate = ColumnType<string, string | Date | undefined, string | Date>;
+type FlexDateNullable = ColumnType<string | null, string | Date | null, string | Date | null>;
+
 interface Shop {
-  id: number;
+  id: Generated<number>;
   channel: string;
   external_shop_id: string;
   name: string;
@@ -44,34 +52,26 @@ interface Shop {
   refresh_token_enc: Buffer | null;
   token_expires_at: Date | null;
   refresh_expires_at: Date | null;
-  is_active: boolean;
+  is_active: Generated<boolean>;
   authorized_at: Date | null;
 }
 
-interface ShopeeCredential {
-  id: number;
-  shop_id: number;
-  partner_id: number;
-  partner_key_enc: Buffer;
-  is_active: boolean;
-}
-
 interface ChannelCredential {
-  id: number;
+  id: Generated<number>;
   shop_id: number;
   key: string;
   value: string;
-  is_encrypted: boolean;
+  is_encrypted: Generated<boolean>;
 }
 
 interface RawPayload {
-  id: number;
+  id: Generated<number>;
   shop_id: number;
   resource: string;
   external_id: string;
   payload: unknown;
   payload_hash: string;
-  fetched_at: Date;
+  fetched_at: Generated<Date>;
   processed_at: Date | null;
 }
 
@@ -82,11 +82,11 @@ interface SyncState {
   last_success_at: Date | null;
   last_error: string | null;
   last_error_at: Date | null;
-  consecutive_failures: number;
+  consecutive_failures: Generated<number>;
 }
 
 interface SalesOrder {
-  id: number;
+  id: Generated<number>;
   shop_id: number;
   external_order_id: string;
   channel_status: string;
@@ -96,14 +96,14 @@ interface SalesOrder {
   paid_at: Date | null;
   completed_at: Date | null;
   cancelled_at: Date | null;
-  gross_amount: string;
+  gross_amount: Generated<string>;
   buyer_ref: string | null;
   channel_updated_at: Date | null;
-  synced_at: Date;
+  synced_at: Generated<Date>;
 }
 
 interface SalesOrderItem {
-  id: number;
+  id: Generated<number>;
   order_id: number;
   external_item_id: string;
   external_variant_id: string | null;
@@ -111,31 +111,31 @@ interface SalesOrderItem {
   product_name: string | null;
   qty: number;
   unit_price: string;
-  discount: string;
+  discount: Generated<string>;
   line_total: string;
 }
 
 interface Settlement {
   order_id: number;
-  gross: string;
-  commission_fee: string;
-  service_fee: string;
-  admin_fee: string;
-  seller_voucher: string;
-  platform_voucher: string;
-  shipping_charged: string;
-  shipping_subsidy: string;
-  other_fee: string;
+  gross: Generated<string>;
+  commission_fee: Generated<string>;
+  service_fee: Generated<string>;
+  admin_fee: Generated<string>;
+  seller_voucher: Generated<string>;
+  platform_voucher: Generated<string>;
+  shipping_charged: Generated<string>;
+  shipping_subsidy: Generated<string>;
+  other_fee: Generated<string>;
   other_fee_detail: unknown | null;
-  net_payout: string;
-  refund_amount: string;
+  net_payout: Generated<string>;
+  refund_amount: Generated<string>;
   payout_date: string | null;
-  is_released: boolean;
-  synced_at: Date;
+  is_released: Generated<boolean>;
+  synced_at: Generated<Date>;
 }
 
 interface Product {
-  id: number;
+  id: Generated<number>;
   shop_id: number;
   external_item_id: string;
   external_variant_id: string | null;
@@ -148,11 +148,11 @@ interface Product {
   listing_status: string | null;
   low_stock_threshold: number | null;
   channel_updated_at: Date | null;
-  synced_at: Date;
+  synced_at: Generated<Date>;
 }
 
 interface StockSnapshot {
-  id: number;
+  id: Generated<number>;
   shop_id: number;
   product_id: number;
   taken_on: string;
@@ -160,53 +160,55 @@ interface StockSnapshot {
 }
 
 interface AppUser {
-  id: number;
+  id: Generated<number>;
   email: string;
   password_hash: string;
   full_name: string;
   role: string;
-  is_active: boolean;
-  created_at: Date;
+  is_active: Generated<boolean>;
+  created_at: Generated<Date>;
 }
 
 interface UserSession {
   id: string;
   user_id: number;
   shop_id: number | null;
-  created_at: Date;
+  created_at: Generated<Date>;
   expires_at: Date;
 }
 
 interface ActivityLog {
-  id: number;
+  id: Generated<number>;
   user_id: number | null;
   action: string;
   detail: unknown | null;
   ip: string | null;
-  created_at: Date;
+  created_at: Generated<Date>;
 }
 
 interface ApiCallLog {
-  id: number;
+  id: Generated<number>;
   shop_id: number | null;
   path: string;
   http_status: number | null;
   error_code: string | null;
   duration_ms: number | null;
-  called_at: Date;
+  called_at: Generated<Date>;
 }
 
 interface ReconciliationCheck {
-  id: number;
+  id: Generated<number>;
   shop_id: number;
   check_date: string;
   local_count: number;
   remote_count: number;
   is_match: boolean;
   detail: unknown | null;
-  checked_at: Date;
+  checked_at: Generated<Date>;
 }
 
+/* Materialized view — tidak pernah di-INSERT/UPDATE lewat Kysely, jadi tidak
+   perlu Generated (REFRESH MATERIALIZED VIEW dilakukan lewat SQL mentah). */
 interface MvDailySales {
   shop_id: number;
   report_date: string;
@@ -217,37 +219,36 @@ interface MvDailySales {
 }
 
 interface SubscriptionPlan {
-  id: number;
+  id: Generated<number>;
   name: string;
   description: string | null;
-  monthly_price: string;
-  features: unknown;
-  is_active: boolean;
-  created_at: Date;
+  monthly_price: Generated<string>;
+  features: Generated<unknown>;
+  is_active: Generated<boolean>;
+  created_at: Generated<Date>;
 }
 
 interface AppRole {
-  id: number;
+  id: Generated<number>;
   name: string;
   label: string;
-  features: unknown;
-  is_system: boolean;
+  features: Generated<unknown>;
+  is_system: Generated<boolean>;
 }
 
 interface ShopSubscription {
-  id: number;
+  id: Generated<number>;
   shop_id: number;
   plan_id: number;
   features: unknown | null;
-  active_since: string;
-  expires_at: string | null;
-  is_trial: boolean;
+  active_since: FlexDate;
+  expires_at: FlexDateNullable;
+  is_trial: Generated<boolean>;
 }
 
 /* Database schema — tambah tabel baru di sini */
 interface Database {
   shop: Shop;
-  shopee_credential: ShopeeCredential;
   channel_credential: ChannelCredential;
   raw_payload: RawPayload;
   sync_state: SyncState;

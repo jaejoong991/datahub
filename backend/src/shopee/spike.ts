@@ -3,6 +3,7 @@
  * Jalankan: npx tsx src/shopee/spike.ts
  */
 import { getShopeeSDK } from './client.js';
+import { ItemStatus } from '../../vendor/shopee-sdk/lib/schemas/product.js';
 
 export {}; // make module for top-level await
 
@@ -24,9 +25,9 @@ await t('Order', () => sdk.order.getOrderList({
   page_size: 5,
 }), 'Order list');
 
-await t('Product', () => sdk.product.getItemList({ offset: 0, page_size: 5, item_status: ['NORMAL'] as any }), 'Product list');
+await t('Product', () => sdk.product.getItemList({ offset: 0, page_size: 5, item_status: [ItemStatus.NORMAL] }), 'Product list');
 
-await t('Shop', () => sdk.shop.getShopInfo() as any, 'Shop info');
+await t('Shop', () => sdk.shop.getShopInfo(), 'Shop info');
 
 await t('Payment', () => sdk.payment.getEscrowList({
   page_size: 5,

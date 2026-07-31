@@ -37,7 +37,7 @@ export async function adminPlanRoutes(app: FastifyInstance) {
       name: parsed.data.name,
       external_shop_id: parsed.data.external_shop_id ?? parsed.data.channel + '-' + Date.now(),
       is_active: true,
-    } as any).returningAll().executeTakeFirstOrThrow();
+    }).returningAll().executeTakeFirstOrThrow();
     return shop;
   });
   app.get('/admin/subscription-plans', { preHandler: [authPreHandler, requireRole(['admin'])] }, async () => {
@@ -54,20 +54,20 @@ export async function adminPlanRoutes(app: FastifyInstance) {
       monthly_price: parsed.data.monthly_price.toString(),
       features: JSON.stringify(parsed.data.features),
       is_active: true,
-    } as any).returningAll().executeTakeFirstOrThrow();
+    }).returningAll().executeTakeFirstOrThrow();
     return plan;
   });
 
-  app.put('/admin/subscription-plans/:id', { preHandler: [authPreHandler, requireRole(['admin'])] }, async (req, reply) => {
-    const { id } = req.params as any;
+  app.put<{ Params: { id: string } }>('/admin/subscription-plans/:id', { preHandler: [authPreHandler, requireRole(['admin'])] }, async (req, reply) => {
+    const { id } = req.params;
     const parsed = planSchema.partial().safeParse(req.body);
     if (!parsed.success) return reply.status(422).send({ message: 'Data tidak valid.' });
-    const update: any = {};
+    const update: { name?: string; description?: string; monthly_price?: string; features?: string } = {};
     if (parsed.data.name !== undefined) update.name = parsed.data.name;
     if (parsed.data.description !== undefined) update.description = parsed.data.description;
     if (parsed.data.monthly_price !== undefined) update.monthly_price = parsed.data.monthly_price.toString();
     if (parsed.data.features !== undefined) update.features = JSON.stringify(parsed.data.features);
-    const plan = await getDb().updateTable('subscription_plan').set(update as any)
+    const plan = await getDb().updateTable('subscription_plan').set(update)
       .where('id', '=', Number(id)).returningAll().executeTakeFirstOrThrow();
     return plan;
   });
@@ -87,8 +87,8 @@ export async function adminPlanRoutes(app: FastifyInstance) {
     return { rows: shops };
   });
 
-  app.post('/admin/shop-plans/:shopId', { preHandler: [authPreHandler, requireRole(['admin'])] }, async (req, reply) => {
-    const { shopId } = req.params as any;
+  app.post<{ Params: { shopId: string } }>('/admin/shop-plans/:shopId', { preHandler: [authPreHandler, requireRole(['admin'])] }, async (req, reply) => {
+    const { shopId } = req.params;
     const parsed = assignSchema.safeParse(req.body);
     if (!parsed.success) return reply.status(422).send({ message: 'Data tidak valid.' });
     const expiresAt = parsed.data.expires_at ? new Date(parsed.data.expires_at) : null;
@@ -99,14 +99,14 @@ export async function adminPlanRoutes(app: FastifyInstance) {
         features: parsed.data.features ? JSON.stringify(parsed.data.features) : null,
         expires_at: expiresAt,
         is_trial: false,
-      } as any).where('shop_id', '=', Number(shopId)).execute();
+      }).where('shop_id', '=', Number(shopId)).execute();
     } else {
       await getDb().insertInto('shop_subscription').values({
         shop_id: Number(shopId), plan_id: parsed.data.plan_id,
         features: parsed.data.features ? JSON.stringify(parsed.data.features) : null,
         expires_at: expiresAt,
         active_since: new Date().toISOString().slice(0, 10),
-      } as any).execute();
+      }).execute();
     }
     return { success: true };
   });

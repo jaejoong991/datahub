@@ -1,9 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import { sql } from 'kysely';
 import { getDb } from '../../lib/db.js';
-import { authPreHandler } from '../../lib/auth.js';
+import { authPreHandler, resolveActiveShopId } from '../../lib/auth.js';
 import { requireFeature, type ColumnDef } from '../../lib/rbac.js';
 import { paginatedResponse } from '../serializer.js';
+import { parsePagination } from '../../lib/pagination.js';
 
 const RELEASED_COLUMNS: ColumnDef[] = [
   { id: 'external_order_id', label: 'Nomor order', align: 'left', mono: true },
@@ -31,9 +32,10 @@ const PENDING_COLUMNS: ColumnDef[] = [
 ];
 
 export async function financeRoutes(app: FastifyInstance) {
-  app.get('/finance/summary', { preHandler: [authPreHandler, requireFeature(['finance', 'order'])] }, async (req) => {
+  app.get('/finance/summary', { preHandler: [authPreHandler, requireFeature(['finance', 'order'])] }, async (req, reply) => {
     const role = req.user!.role;
-    const shopId = req.shopId ?? 1;
+    const shopId = resolveActiveShopId(req, reply);
+    if (shopId === null) return;
     const released = await sql<{ order_count: number; gross: string; total_fee: string | null; net_payout: string | null }>`
       SELECT count(*)::int as order_count, coalesce(sum(s.gross),0) as gross,
              coalesce(sum(s.commission_fee + s.service_fee + s.admin_fee),0) as total_fee,
@@ -56,12 +58,13 @@ export async function financeRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get('/finance/released', { preHandler: [authPreHandler, requireFeature(['finance', 'order'])] }, async (req) => {
+  app.get<{ Querystring: { page?: string; limit?: string } }>('/finance/released', { preHandler: [authPreHandler, requireFeature(['finance', 'order'])] }, async (req, reply) => {
     const role = req.user!.role;
-    const shopId = req.shopId ?? 1;
-    const page = Number((req.query as any).page ?? 1);
-    const limit = Number((req.query as any).limit ?? 50);
-    const offset = (page - 1) * limit;
+    const shopId = resolveActiveShopId(req, reply);
+    if (shopId === null) return;
+    const pagination = parsePagination(req.query, reply);
+    if (!pagination) return;
+    const { page, limit, offset } = pagination;
     const rows = await sql<any>`
       SELECT o.external_order_id, s.payout_date, s.gross, s.commission_fee, s.service_fee,
              s.admin_fee, s.seller_voucher, s.refund_amount, s.net_payout,
@@ -74,15 +77,16 @@ export async function financeRoutes(app: FastifyInstance) {
       SELECT count(*)::int as count FROM sales_order o JOIN settlement s ON s.order_id = o.id
       WHERE o.shop_id = ${shopId} AND s.is_released = true
     `.execute(getDb());
-    return paginatedResponse(RELEASED_COLUMNS, (rows as any).rows, countResult.rows[0]?.count ?? 0, page, limit, role);
+    return paginatedResponse(RELEASED_COLUMNS, rows.rows, countResult.rows[0]?.count ?? 0, page, limit, role);
   });
 
-  app.get('/finance/pending', { preHandler: [authPreHandler, requireFeature(['finance', 'order'])] }, async (req) => {
+  app.get<{ Querystring: { page?: string; limit?: string } }>('/finance/pending', { preHandler: [authPreHandler, requireFeature(['finance', 'order'])] }, async (req, reply) => {
     const role = req.user!.role;
-    const shopId = req.shopId ?? 1;
-    const page = Number((req.query as any).page ?? 1);
-    const limit = Number((req.query as any).limit ?? 50);
-    const offset = (page - 1) * limit;
+    const shopId = resolveActiveShopId(req, reply);
+    if (shopId === null) return;
+    const pagination = parsePagination(req.query, reply);
+    if (!pagination) return;
+    const { page, limit, offset } = pagination;
     const rows = await sql<any>`
       SELECT o.external_order_id, s.payout_date as eta, o.gross_amount as gross,
              NULL as commission_fee, NULL as service_fee, NULL as admin_fee,
@@ -96,11 +100,12 @@ export async function financeRoutes(app: FastifyInstance) {
       SELECT count(*)::int as count FROM sales_order o LEFT JOIN settlement s ON s.order_id = o.id
       WHERE o.shop_id = ${shopId} AND (s.order_id IS NULL OR s.is_released = false)
     `.execute(getDb());
-    return paginatedResponse(PENDING_COLUMNS, (rows as any).rows, countResult.rows[0]?.count ?? 0, page, limit, role);
+    return paginatedResponse(PENDING_COLUMNS, rows.rows, countResult.rows[0]?.count ?? 0, page, limit, role);
   });
 
-  app.get('/finance/fees', { preHandler: [authPreHandler, requireFeature(['finance'])] }, async (req) => {
-    const shopId = req.shopId ?? 1;
+  app.get('/finance/fees', { preHandler: [authPreHandler, requireFeature(['finance'])] }, async (req, reply) => {
+    const shopId = resolveActiveShopId(req, reply);
+    if (shopId === null) return;
     const feeRow = await sql<{ gross: string; comm: string; serv: string; adm: string; voucher: string; other: string }>`
       SELECT coalesce(sum(s.gross),0) as gross, coalesce(sum(s.commission_fee),0) as comm,
              coalesce(sum(s.service_fee),0) as serv, coalesce(sum(s.admin_fee),0) as adm,

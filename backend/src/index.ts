@@ -1,4 +1,4 @@
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyError } from 'fastify';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
@@ -27,6 +27,24 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(cors, { origin: env.CORS_ORIGIN, credentials: true });
   await app.register(cookie);
   await app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
+
+  /* Error handler global — dulu tidak ada, jadi throw yang tidak ketangkep
+     (mis. admin.ts throw new Error('User tidak ditemukan.')) balik ke client
+     apa adanya lewat body default Fastify, bocorin detail internal. Sekarang:
+     - log lengkap di server (message + stack lewat logError)
+     - 5xx → pesan generik ke client, detail asli TIDAK pernah sampai keluar
+     - 4xx yang sudah dilempar plugin (mis. @fastify/rate-limit → 429) TETAP
+       pakai status & message aslinya — cuma dibungkus ke shape {message, code}
+       konsisten sama respons error rute lain di app ini. */
+  app.setErrorHandler((err: FastifyError, req, reply) => {
+    const statusCode = err.statusCode ?? 500;
+    logError(`Unhandled error on ${req.method} ${req.url}`, err);
+    if (statusCode >= 500) {
+      reply.status(500).send({ message: 'Terjadi kesalahan pada server.', code: 'internal_error' });
+      return;
+    }
+    reply.status(statusCode).send({ message: err.message, code: err.code ?? 'error' });
+  });
 
   await authRoutes(app);
   await syncRoutes(app);

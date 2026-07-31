@@ -1,9 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import { sql } from 'kysely';
 import { getDb } from '../../lib/db.js';
-import { authPreHandler } from '../../lib/auth.js';
+import { authPreHandler, resolveActiveShopId } from '../../lib/auth.js';
 import { requireFeature, type ColumnDef } from '../../lib/rbac.js';
 import { paginatedResponse } from '../serializer.js';
+import { parsePagination } from '../../lib/pagination.js';
 
 const TOP_COLUMNS: ColumnDef[] = [
   { id: 'sku', label: 'SKU', align: 'left', mono: true },
@@ -13,8 +14,9 @@ const TOP_COLUMNS: ColumnDef[] = [
 ];
 
 export async function salesRoutes(app: FastifyInstance) {
-  app.get('/sales/summary', { preHandler: [authPreHandler, requireFeature(['order', 'sales'])] }, async (req) => {
-    const shopId = req.shopId ?? 1;
+  app.get('/sales/summary', { preHandler: [authPreHandler, requireFeature(['order', 'sales'])] }, async (req, reply) => {
+    const shopId = resolveActiveShopId(req, reply);
+    if (shopId === null) return;
     const row = await sql<{ gross: string; order_count: number; items_sold: number; aov: string }>`
       SELECT coalesce(sum(o.gross_amount),0) as gross, count(*)::int as order_count,
              coalesce(sum(i.qty),0)::int as items_sold,
@@ -31,8 +33,9 @@ export async function salesRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get('/sales/trend', { preHandler: [authPreHandler, requireFeature(['order', 'sales'])] }, async (req) => {
-    const shopId = req.shopId ?? 1;
+  app.get('/sales/trend', { preHandler: [authPreHandler, requireFeature(['order', 'sales'])] }, async (req, reply) => {
+    const shopId = resolveActiveShopId(req, reply);
+    if (shopId === null) return;
     const rows = await sql<{ report_date: string; gross: string }>`
       SELECT report_date, sum(gross_amount) as gross
       FROM sales_order WHERE shop_id = ${shopId}
@@ -43,12 +46,13 @@ export async function salesRoutes(app: FastifyInstance) {
     return { max, rows: rows.rows.map(r => ({ report_date: r.report_date, gross: Number(r.gross) })).reverse() };
   });
 
-  app.get('/sales/top-products', { preHandler: [authPreHandler, requireFeature(['order', 'sales'])] }, async (req) => {
+  app.get<{ Querystring: { page?: string; limit?: string } }>('/sales/top-products', { preHandler: [authPreHandler, requireFeature(['order', 'sales'])] }, async (req, reply) => {
     const role = req.user!.role;
-    const shopId = req.shopId ?? 1;
-    const page = Number((req.query as any).page ?? 1);
-    const limit = Number((req.query as any).limit ?? 50);
-    const offset = (page - 1) * limit;
+    const shopId = resolveActiveShopId(req, reply);
+    if (shopId === null) return;
+    const pagination = parsePagination(req.query, reply);
+    if (!pagination) return;
+    const { page, limit, offset } = pagination;
     const rows = await sql<any>`
       SELECT i.sku, max(i.product_name) as name, sum(i.qty)::int as qty, sum(i.line_total) as gross
       FROM sales_order_item i JOIN sales_order o ON o.id = i.order_id
@@ -60,6 +64,6 @@ export async function salesRoutes(app: FastifyInstance) {
       FROM sales_order_item i JOIN sales_order o ON o.id = i.order_id
       WHERE o.shop_id = ${shopId} AND i.sku IS NOT NULL
     `.execute(getDb());
-    return paginatedResponse(TOP_COLUMNS, (rows as any).rows, countResult.rows[0]?.count ?? 0, page, limit, role);
+    return paginatedResponse(TOP_COLUMNS, rows.rows, countResult.rows[0]?.count ?? 0, page, limit, role);
   });
 }

@@ -1,12 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import { sql } from 'kysely';
 import { getDb } from '../../lib/db.js';
-import { authPreHandler } from '../../lib/auth.js';
+import { authPreHandler, resolveActiveShopId } from '../../lib/auth.js';
 import { requireFeature } from '../../lib/rbac.js';
 
 export async function warehouseRoutes(app: FastifyInstance) {
-  app.get('/warehouse/picklist', { preHandler: [authPreHandler, requireFeature(['logistics', 'warehouse'])] }, async (req) => {
-    const shopId = req.shopId ?? 1;
+  app.get('/warehouse/picklist', { preHandler: [authPreHandler, requireFeature(['logistics', 'warehouse'])] }, async (req, reply) => {
+    const shopId = resolveActiveShopId(req, reply);
+    if (shopId === null) return;
     const orders = await sql<any>`
       SELECT o.external_order_id, o.ordered_at, o.channel_status
       FROM sales_order o
