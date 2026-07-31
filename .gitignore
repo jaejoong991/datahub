@@ -24,6 +24,10 @@ logs/
 coverage/
 .nyc_output/
 
+# Spike API Fase 0.5 — bukti/raw response Shopee (bisa berisi data pembeli,
+# jangan pernah commit). Lihat backend/src/shopee/spike.ts.
+backend/spike-output/
+
 # Editor & OS
 .DS_Store
 Thumbs.db
