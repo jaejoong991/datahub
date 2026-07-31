@@ -1,9 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
+import {
+  BrowserRouter, Routes, Route, Navigate, Outlet, Link,
+  useLocation, useNavigate,
+} from 'react-router-dom';
 import { api, API_MODE, logout as apiLogout, switchShop as apiSwitchShop } from './lib/api.js';
 import { useApi } from './lib/useApi.js';
 import { mockSession } from './mocks/index.js';
 import { Sidebar, Topbar } from './components/Shell.jsx';
-import { allowedPageIds } from './lib/nav.js';
+import { NAV, allowedPageIds, pathForPage } from './lib/nav.js';
 import { Loading, ErrorState } from './components/states.jsx';
 import { Notice } from './components/primitives.jsx';
 import Login from './pages/Login.jsx';
@@ -54,6 +58,17 @@ const PAGES = {
   roles:          { kicker: 'Sistem',      title: 'Role & Akses',            Component: AdminRoles },
 };
 
+/* Semua page id yang dikenal, urut sesuai NAV. Route didaftarkan dari daftar
+   ini (lihat <Routes> di AppRoot) supaya menu (Sidebar via navFor) dan route
+   yang sungguhan ada TIDAK PERNAH didaftarkan dua kali secara terpisah. */
+const PAGE_IDS = NAV.flatMap((g) => g.items.map((i) => i.id));
+
+/* Landing page default kalau URL "/" diakses. Dipertahankan dari perilaku
+   pre-router (useState awal = 'keuangan'): kalau role tidak punya akses ke
+   Keuangan, jatuh ke halaman pertama yang diizinkan (allowed[0]) — sama
+   seperti fallback effectivePage yang lama. */
+const DEFAULT_PAGE_ID = 'keuangan';
+
 /* Peran ditentukan server lewat /me. Pengalih di bawah hanya untuk mode mock,
    supaya klien bisa melihat perbedaan tampilan tiap peran. Hapus DevBar
    sebelum produksi. */
@@ -77,13 +92,76 @@ function DevBar({ role, onRole }) {
   );
 }
 
-export default function App() {
+/** Halaman di luar wewenang role saat ini. Ini pengecekan sisi KLIEN untuk
+ *  defense-in-depth + UX (mencegah URL yang diketik langsung menampilkan
+ *  konten yang menunya sendiri tidak pernah dirender) — bukan satu-satunya
+ *  gerbang. Otorisasi sesungguhnya tetap ditegakkan di server lewat RBAC
+ *  (requireFeature/requireRole di backend/src/web/routes/); endpoint API
+ *  akan menolak dengan 403 terlepas dari apa yang dirender di sini. */
+function AccessDenied() {
+  return (
+    <div className="page">
+      <Notice tone="danger" icon="lock" title="Akses ditolak">
+        Peran Anda tidak memiliki izin untuk membuka halaman ini. Kalau menurut
+        Anda ini keliru, hubungi admin untuk meninjau ulang role & akses.
+      </Notice>
+    </div>
+  );
+}
+
+function NotFoundPage({ homePath }) {
+  return (
+    <div className="page">
+      <Notice tone="warning" icon="help" title="Halaman tidak ditemukan">
+        URL ini tidak dikenal aplikasi. <Link to={homePath}>Kembali ke beranda</Link>.
+      </Notice>
+    </div>
+  );
+}
+
+/** Shell tata letak: Sidebar + Topbar bersama, konten tiap route lewat <Outlet/>.
+ *  kicker/title Topbar diturunkan dari URL aktif (bukan state terpisah) supaya
+ *  selalu sinkron dengan route yang benar-benar cocok. */
+function Shell({
+  role, user, shops, activeShopId, features, sync, shopError,
+  onNavigate, onShopChange, onLogout, children,
+}) {
+  const location = useLocation();
+  const currentId = location.pathname.slice(1);
+  const { kicker, title } = PAGES[currentId] ?? PAGES.ringkasan;
+  const activeShop = shops.find((s) => s.id === activeShopId);
+
+  return (
+    <div className="shell">
+      <Sidebar
+        role={role}
+        user={user}
+        shops={shops} activeShopId={activeShopId}
+        features={features}
+        page={currentId} onNavigate={onNavigate}
+        onShopChange={onShopChange}
+        onLogout={onLogout}
+      />
+      <main className="main">
+        <Topbar kicker={kicker} title={title} sync={sync} shopName={activeShop?.name} />
+        {shopError && (
+          <div className="page">
+            <Notice tone="danger" icon="error" title="Gagal mengganti toko">{shopError}</Notice>
+          </div>
+        )}
+        {children ?? <Outlet />}
+      </main>
+    </div>
+  );
+}
+
+function AppRoot() {
   const [session, setSession] = useState(null); // null=loading, 'login'=perlu login, {user,shop}=terautentikasi
   const [sessionError, setSessionError] = useState(null);
   const [role, setRole] = useState('finance');
-  const [page, setPage] = useState('keuangan');
   const [appActiveShopId, setAppActiveShopId] = useState(null); // override shop ID
   const [shopError, setShopError] = useState(null);
+  const navigate = useNavigate();
 
   const loadSession = useCallback(async () => {
     setSession(null);
@@ -108,25 +186,6 @@ export default function App() {
   const me = useApi(api.me, { role });
   const sync = useApi(api.syncState, { role });
 
-  // Hash routing untuk screenshot: /#ringkasan, /#keuangan, /#stok, /#gudang, /#sinkron, /#users
-  // Role override: /#warehouse:stok, /#finance:ringkasan
-  useEffect(() => {
-    if (!session || session === 'login') return;
-    const hash = window.location.hash.replace('#', '');
-    if (!hash) return;
-    const parts = hash.split(':');
-    const targetRole = parts.length > 1 ? parts[0] : null;
-    const targetPage = parts.length > 1 ? parts[1] : parts[0];
-    if (targetRole && API_MODE === 'mock') {
-      mockSession.role = targetRole;
-      setRole(targetRole);
-    }
-    const sid = me.data?.active_shop_id ?? 1;
-    const shopFeatures = me.data?.shops?.find(s => s.id === sid)?.features;
-    const allowed = allowedPageIds(targetRole || role, me.data?.user?.role_features, shopFeatures);
-    if (allowed.includes(targetPage)) setPage(targetPage);
-  }, [session, role]);
-
   function changeRole(next) {
     mockSession.role = next;
     setRole(next);
@@ -141,12 +200,12 @@ export default function App() {
   // ——— render ———
 
   if (session === 'login') {
-    // Auto-login di mock mode kalau ada hash → buat screenshot
-    if (API_MODE === 'mock' && window.location.hash.length > 1) {
-      mockSession.loggedIn = true;
-      loadSession();
-      return null;
-    }
+    /* Sengaja TIDAK menavigasi ke path "/login": URL saat ini dibiarkan apa
+       adanya. Begitu loadSession() berhasil, komponen ini langsung diganti
+       oleh <Routes> di bawah yang mencocokkan URL yang SAMA — jadi kalau
+       user tadinya mengetik langsung /gudang lalu diminta login, dia
+       mendarat di /gudang lagi setelah login, tanpa kode redirect-balik
+       terpisah. Itulah cara "deep-link intent" dipertahankan lewat login. */
     return (
       <Login
         onLogin={loadSession}
@@ -203,59 +262,94 @@ export default function App() {
   const activeShopId = activeShop.id;
   const activeFeatures = activeShop.features ?? ['reader'];
 
-  /* Satu sumber buat sidebar dan konten. Page di luar daftar ini tidak pernah
-     dirender, jadi tidak ada lagi kasus menu tampil tapi isinya dilempar balik. */
+  /* Satu sumber buat sidebar dan route mana saja yang boleh menampilkan
+     konten sungguhan (lihat guard per-route di <Routes> bawah). */
   const allowed = allowedPageIds(role, me.data.user?.role_features, activeFeatures);
-  const effectivePage = allowed.includes(page) ? page : allowed[0];
-  const { Component, kicker, title } = PAGES[effectivePage] ?? PAGES.ringkasan;
+
+  function onShopChange(sid) {
+    setShopError(null);
+    setAppActiveShopId(sid);
+    if (API_MODE === 'mock') {
+      mockSession.activeShopId = sid;
+      return;
+    }
+    /* Kalau server menolak, kembalikan ke toko dari sesi. Tanpa ini menu
+       memakai fitur toko baru sementara sesi backend masih toko lama —
+       menu tampil, API-nya 403. */
+    apiSwitchShop(sid).catch((err) => {
+      setAppActiveShopId(null);
+      setShopError(err?.message ?? 'Gagal mengganti toko. Coba lagi.');
+    });
+  }
+
+  if (allowed.length === 0) {
+    // Tidak ada satu pun page yang boleh dibuka -> tidak ada yang bisa
+    // dirutekan. Tampilkan shell + notice langsung, tanpa <Routes>.
+    return (
+      <>
+        <DevBar role={role} onRole={changeRole} />
+        <Shell
+          role={role} user={me.data.user}
+          shops={shops} activeShopId={activeShopId} features={activeFeatures}
+          sync={sync.data} shopError={shopError}
+          onNavigate={(id) => navigate(pathForPage(id))}
+          onShopChange={onShopChange} onLogout={handleLogout}
+        >
+          <div className="page">
+            <Notice tone="warning" icon="lock" title="Tidak ada modul yang bisa dibuka">
+              Role <strong>{me.data.user?.role_label ?? role}</strong> tidak punya fitur yang
+              tersedia di paket langganan toko <strong>{activeShop.name}</strong>. Minta admin
+              menambah fitur role atau menaikkan paket toko.
+            </Notice>
+          </div>
+        </Shell>
+      </>
+    );
+  }
+
+  const defaultId = allowed.includes(DEFAULT_PAGE_ID) ? DEFAULT_PAGE_ID : allowed[0];
 
   return (
     <>
       <DevBar role={role} onRole={changeRole} />
-      <div className="shell">
-        <Sidebar
-          role={role}
-          user={me.data.user}
-          shops={shops} activeShopId={activeShopId}
-          features={activeFeatures}
-          page={effectivePage} onNavigate={setPage}
-          onShopChange={(sid) => {
-            setShopError(null);
-            setAppActiveShopId(sid);
-            if (API_MODE === 'mock') {
-              mockSession.activeShopId = sid;
-              return;
-            }
-            /* Kalau server menolak, kembalikan ke toko dari sesi. Tanpa ini menu
-               memakai fitur toko baru sementara sesi backend masih toko lama —
-               menu tampil, API-nya 403. */
-            apiSwitchShop(sid).catch((err) => {
-              setAppActiveShopId(null);
-              setShopError(err?.message ?? 'Gagal mengganti toko. Coba lagi.');
-            });
-          }}
-          onLogout={handleLogout}
-        />
-        <main className="main">
-          <Topbar kicker={kicker} title={title} sync={sync.data} shopName={activeShop.name} />
-          {shopError && (
-            <div className="page">
-              <Notice tone="danger" icon="error" title="Gagal mengganti toko">{shopError}</Notice>
-            </div>
+      <Routes>
+        <Route
+          element={(
+            <Shell
+              role={role} user={me.data.user}
+              shops={shops} activeShopId={activeShopId} features={activeFeatures}
+              sync={sync.data} shopError={shopError}
+              onNavigate={(id) => navigate(pathForPage(id))}
+              onShopChange={onShopChange} onLogout={handleLogout}
+            />
           )}
-          {allowed.length === 0 ? (
-            <div className="page">
-              <Notice tone="warning" icon="lock" title="Tidak ada modul yang bisa dibuka">
-                Role <strong>{me.data.user?.role_label ?? role}</strong> tidak punya fitur yang
-                tersedia di paket langganan toko <strong>{activeShop.name}</strong>. Minta admin
-                menambah fitur role atau menaikkan paket toko.
-              </Notice>
-            </div>
-          ) : (
-            <Component role={role} onPlanChange={me.reload} onRoleChange={me.reload} />
-          )}
-        </main>
-      </div>
+        >
+          {PAGE_IDS.map((id) => {
+            const meta = PAGES[id];
+            if (!meta) return null;
+            const { Component } = meta;
+            return (
+              <Route
+                key={id}
+                path={id}
+                element={allowed.includes(id)
+                  ? <Component role={role} onPlanChange={me.reload} onRoleChange={me.reload} />
+                  : <AccessDenied />}
+              />
+            );
+          })}
+          <Route index element={<Navigate to={pathForPage(defaultId)} replace />} />
+          <Route path="*" element={<NotFoundPage homePath={pathForPage(defaultId)} />} />
+        </Route>
+      </Routes>
     </>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppRoot />
+    </BrowserRouter>
   );
 }
