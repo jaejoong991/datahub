@@ -99,3 +99,25 @@ export function navFor(role, roleFeatures = [], shopFeatures = DEFAULT_SHOP_FEAT
 export function allowedPageIds(role, roleFeatures, shopFeatures) {
   return navFor(role, roleFeatures, shopFeatures).flatMap(g => g.items.map(i => i.id));
 }
+
+/**
+ * Daftar page id (urut sesuai NAV), dipakai App.jsx buat mendaftarkan route
+ * router — supaya route yang tersedia sama persis dengan menu, tanpa
+ * pemetaan id/path kedua yang bisa berbeda dari NAV.
+ *
+ * @returns {string[]}
+ */
+export function allPageIds() {
+  return NAV.flatMap(g => g.items.map(i => i.id));
+}
+
+/**
+ * Path URL untuk sebuah page id. Fungsi murni dari id -> path (bukan tabel
+ * terpisah) supaya route TIDAK PERNAH didaftarkan dua kali secara manual.
+ *
+ * @param {string} id
+ * @returns {string}
+ */
+export function pathForPage(id) {
+  return `/${id}`;
+}
