@@ -2,13 +2,15 @@ import type { FastifyInstance } from 'fastify';
 import pg from 'pg';
 import { getDb } from '../../lib/db.js';
 import { getEnv } from '../../lib/env.js';
-import { authPreHandler } from '../../lib/auth.js';
+import { authPreHandler, resolveActiveShopId } from '../../lib/auth.js';
 import { requireRole, requireFeature } from '../../lib/rbac.js';
 
 export async function syncRoutes(app: FastifyInstance) {
-  app.get('/sync/state', { preHandler: [authPreHandler] }, async (req) => {
+  app.get('/sync/state', { preHandler: [authPreHandler] }, async (req, reply) => {
+    const shopId = resolveActiveShopId(req, reply);
+    if (shopId === null) return;
     const states = await getDb().selectFrom('sync_state').selectAll()
-      .where('shop_id', '=', req.shopId ?? 1).execute();
+      .where('shop_id', '=', shopId).execute();
     let minSuccess: Date | null = null;
     for (const s of states) {
       if (s.last_success_at && (!minSuccess || s.last_success_at < minSuccess)) minSuccess = s.last_success_at;
@@ -17,9 +19,11 @@ export async function syncRoutes(app: FastifyInstance) {
     return { last_success_at: minSuccess, stale_threshold_minutes: 30, is_stale: isStale };
   });
 
-  app.get('/sync/jobs', { preHandler: [authPreHandler, requireRole(['admin']), requireFeature(['reader'])] }, async (req) => {
+  app.get('/sync/jobs', { preHandler: [authPreHandler, requireRole(['admin']), requireFeature(['reader'])] }, async (req, reply) => {
+    const shopId = resolveActiveShopId(req, reply);
+    if (shopId === null) return;
     const states = await getDb().selectFrom('sync_state').selectAll()
-      .where('shop_id', '=', req.shopId ?? 1).execute();
+      .where('shop_id', '=', shopId).execute();
     const labelMap: Record<string, string> = {
       order: 'Order', settlement: 'Keuangan', product: 'Produk', stock_snapshot: 'Snapshot stok',
     };
@@ -30,7 +34,7 @@ export async function syncRoutes(app: FastifyInstance) {
       consecutive_failures: s.consecutive_failures, last_error: s.last_error,
     }));
     const shop = await getDb().selectFrom('shop').selectAll()
-      .where('id', '=', req.shopId ?? 1).executeTakeFirst();
+      .where('id', '=', shopId).executeTakeFirst();
     const apiCalls = 0; // TODO: query count from api_call_log
     return {
       rows, token: { expires_at: shop?.token_expires_at, refresh_expires_at: shop?.refresh_expires_at },
@@ -38,9 +42,11 @@ export async function syncRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get('/sync/reconciliation', { preHandler: [authPreHandler, requireRole(['admin']), requireFeature(['reader'])] }, async () => {
+  app.get('/sync/reconciliation', { preHandler: [authPreHandler, requireRole(['admin']), requireFeature(['reader'])] }, async (req, reply) => {
+    const shopId = resolveActiveShopId(req, reply);
+    if (shopId === null) return;
     const rows = await getDb().selectFrom('reconciliation_check').selectAll()
-      .where('shop_id', '=', 1).orderBy('check_date', 'desc').limit(7).execute();
+      .where('shop_id', '=', shopId).orderBy('check_date', 'desc').limit(7).execute();
     return { rows };
   });
 }

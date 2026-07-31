@@ -80,7 +80,7 @@ export async function seedTestUsers(): Promise<SeedResult> {
       name: 'Test Shop',
       is_active: true,
       authorized_at: new Date(),
-    } as any)
+    })
     .returning('id')
     .executeTakeFirstOrThrow();
 
@@ -93,7 +93,7 @@ export async function seedTestUsers(): Promise<SeedResult> {
   }
 
   await db.insertInto('shop_subscription')
-    .values({ shop_id: shop.id, plan_id: plan.id, active_since: new Date() } as any)
+    .values({ shop_id: shop.id, plan_id: plan.id, active_since: new Date() })
     .execute();
 
   const users = {} as Record<Role, TestUser>;
@@ -106,7 +106,7 @@ export async function seedTestUsers(): Promise<SeedResult> {
         full_name: `Test ${role[0].toUpperCase()}${role.slice(1)}`,
         role,
         is_active: true,
-      } as any)
+      })
       .returning('id')
       .executeTakeFirstOrThrow();
     users[role] = { id: row.id, email, role };

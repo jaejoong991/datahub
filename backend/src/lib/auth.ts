@@ -60,3 +60,19 @@ export async function authPreHandler(req: FastifyRequest, reply: FastifyReply): 
   };
   req.shopId = session.shopId;
 }
+
+/* Resolve toko aktif sesi dengan FAIL CLOSED — dulu banyak route pakai
+   `req.shopId ?? 1` yang diam-diam nyajiin data shop 1 ke sesi manapun tanpa
+   toko aktif. Sekarang: tidak ada toko aktif → 400 eksplisit, BUKAN fallback
+   ke shop tertentu. Panggil di awal handler; kalau return null, reply sudah
+   terkirim, tinggal `return`. */
+export function resolveActiveShopId(req: FastifyRequest, reply: FastifyReply): number | null {
+  if (req.shopId == null) {
+    reply.status(400).send({
+      message: 'Tidak ada toko aktif untuk sesi ini. Pilih toko dulu lewat /me/shop.',
+      code: 'no_active_shop',
+    });
+    return null;
+  }
+  return req.shopId;
+}
